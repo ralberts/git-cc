@@ -103,6 +103,13 @@ def removeFile(file):
     if exists(file):
         os.remove(file)
 
+def buildPath(seq):
+     # If running in a unix-like environment (including cygwin) use '/' as a path separator, otherwise use '\'
+     if "TERM" in os.environ.keys():
+        return '/'.join(seq).replace("\\","/")
+     else:
+        return '\\'.join(seq).replace("/","\\")
+
 GIT_DIR = gitDir()
 cfg = GitConfigParser()
 if exists(join(GIT_DIR, '.git')):

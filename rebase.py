@@ -1,7 +1,7 @@
 """Rebase from Clearcase"""
 
 from os.path import join, dirname, exists, isdir
-import os, stat
+import os, stat, shutil, time
 from common import *
 from datetime import datetime, timedelta
 from users import users, mailSuffix
@@ -35,7 +35,7 @@ def main(stash=False, dry_run=False, lshistory=False, load=None):
     if lshistory:
         print(history)
     else:
-        cs = parseHistory(history)
+        cs = parseHistory(history,getCurrentVersions())
         cs.sort(key = lambda x: x.date)
         cs = mergeHistory(cs)
         if dry_run:
@@ -79,6 +79,16 @@ def getHistory(since):
     lsh.extend(cfg.getList('include', '.'))
     return cc_exec(lsh)
 
+def getCurrentVersions():
+    lsc = ['ls','-recurse','-short'][:]
+    lsc.extend(cfg.getList('include','.'))
+    ls = cc_exec(lsc).splitlines()
+    versions = dict()
+    for line in ls:
+        if line.count('@@') > 0:
+            versions[line.split('@@')[0]] = Version(line)
+    return versions
+
 def filterBranches(version):
     version = version.split('\\')
     version.pop()
@@ -88,7 +98,7 @@ def filterBranches(version):
             return True
     return False
 
-def parseHistory(lines):
+def parseHistory(lines,versions):
     changesets = []
     def add(split, comment):
         if not split:
@@ -97,6 +107,9 @@ def parseHistory(lines):
         if cstype in TYPES:
             cs = TYPES[cstype](split, comment)
             if filterBranches(cs.version):
+                if versions[cs.file].branch != cs.version.split('\\')[-2]:
+                    if datetime.fromtimestamp(os.path.getmtime(buildPath([CC_DIR,versions[cs.file].file]))) < datetime.strptime(cs.date[:-3], '%Y-%m-%dT%H:%M:%S'): 
+                        return
                 changesets.append(cs)
     last = None
     comment = None
@@ -210,6 +223,14 @@ class Uncataloged(Changeset):
                     return s[0] == 'checkinversion' and s[1] < date and filterBranches(s[2])
                 version = list(filter(f, list(map(lambda x: x.split('|'), history.split('\n')))))[0][2]
                 self._add(added, version.strip())
+
+class Version(object):
+    def __init__(self,lsline):
+        split = lsline.split('@@')
+        self.file = split[0]
+        versionSplit = split[1].split('\\')
+        self.branch = versionSplit[-2]
+        self.version = versionSplit[-1]
 
 TYPES = {\
     'checkinversion': Changeset,\
