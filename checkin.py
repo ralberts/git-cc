@@ -8,17 +8,19 @@ from os import listdir
 from os.path import isdir
 
 IGNORE_CONFLICTS=False
-
+SEND_MAIL=False
 ARGS = {
     'force': 'ignore conflicts and check-in anyway',
 }
 
-def main(force=False):
-    global IGNORE_CONFLICTS
+def main(force=False,sendmail=False):
+    global IGNORE_CONFLICTS, SEND_MAIL
     if force:
         IGNORE_CONFLICTS=True
+    if sendmail:
+        SEND_MAIL=True
     cc_exec(['update', '.'])
-    log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%s%n%b', CI_TAG + '..'])
+    log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', CI_TAG + '..'])
     comment = []
     id = None
     def _commit():
@@ -26,14 +28,19 @@ def main(force=False):
             return
         statuses = getStatuses(id)
         checkout(statuses, '\n'.join(comment))
+        if SEND_MAIL:
+            sendEmail(email,"Your commit with id " + id + " has been checked into clearcase")
         tag(CI_TAG, id)
     for line in log.splitlines():
         if line == "":
             _commit()
             comment = []
             id = None
+            email = None
         if not id:
             id = line
+        else if not email:
+            email = line
         else:
             comment.append(line)
     _commit()
@@ -99,7 +106,7 @@ class Transaction:
         for file in self.checkedout:
             cc_exec(['unco', '-rm', file])
         cc.rmactivity()
-    def commit(self, comment):
+    def commit(self, comment, email):
         for file in self.checkedout:
             cc_exec(['ci', '-identical', '-c', comment, file])
         cc.commit()
