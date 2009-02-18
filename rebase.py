@@ -224,7 +224,7 @@ class Uncataloged(Changeset):
                 versions = list(filter(f, list(map(lambda x: x.split('|'), history.split('\n')))))
                 if len(versions) == 0:
                     raise Exception("It appears that you may be missing a branch (or have a mis-spelling) in the includes section of your gitcc config file.")  
-                self._add(added, version.strip())
+                self._add(added, versions[0][2].strip())
 
 class Version(object):
     def __init__(self,lsline):
