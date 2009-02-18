@@ -25,7 +25,7 @@ def loop():
     git_exec(['pull'])
     try:
         rebase.main(merge=True)
-    except Exception, e:
+    except:
         sendEmail(ADMIN_EMAIL,e)
         return False
     merge = git_exec(['merge', CC_TAG])
@@ -37,13 +37,17 @@ def loop():
         # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
         tag(CI_TAG,CHECKIN_BRANCH)
         git_exec(['push','origin',CHECKIN_BRANCH]);
-        git_exec(['push','origin',CC_TAG]);
-    except Exception, e:
+    except:
         sendEmail(ADMIN_EMAIL,e)
         # Someone just checked in - rebase again
         return False
+    
+    try:
+        rebase.main(merge=True)
+    except:
+        sendEmail(ADMIN_EMAIL,e)
+        return False
     return True
-
 
 if __name__ == '__main__':
     main()
