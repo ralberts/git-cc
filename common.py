@@ -110,6 +110,14 @@ def buildPath(seq):
      else:
         return '\\'.join(seq).replace("/","\\")
 
+def sendEmail(to,message):
+    if not cfg.get('smtp_host',None):
+        print("Cannot send email, no smtp_host defined in gitcc config")
+    server = smtplib.SMTP(cfg.get('smpt_host'))
+    server.sendmail('gitcc@no-reply.com', to, message)
+    server.quit()
+      
+        
 GIT_DIR = gitDir()
 cfg = GitConfigParser()
 if exists(join(GIT_DIR, '.git')):

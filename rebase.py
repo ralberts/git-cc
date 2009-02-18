@@ -21,9 +21,12 @@ ARGS = {
     'dry_run': 'Prints a list of changesets to be imported',
     'lshistory': 'Prints the raw output of lshistory to be cached for load',
     'load': 'Loads the contents of a previously saved lshistory file',
+    'merge': 'Uses \'git merge\' instead of \'git rebase\' to sync the current branch'
 }
 
-def main(stash=False, dry_run=False, lshistory=False, load=None):
+def main(stash=False, dry_run=False, lshistory=False, load=None, merge=False):
+    if merge and not len(getCurrentBranch()) or getCurrentBranc() == CC_TAG:
+        fail('You must be on a branch other then ' + CC_TAG + 'to use the --merge option')
     if not (stash or dry_run or lshistory):
         checkPristine()
     since = getSince()
@@ -42,17 +45,24 @@ def main(stash=False, dry_run=False, lshistory=False, load=None):
             return printGroups(cs)
         if not len(cs):
             return
-        doStash(lambda: doCommit(cs), stash)
+        doStash(lambda: doCommit(cs, merge), stash)
 
-def doCommit(cs):
+def doCommit(cs, merge):
     branch = getCurrentBranch()
     git_exec(['checkout', CC_TAG])
     commit(cs)
-    if len(branch):
-        git_exec(['rebase', '--onto', CC_TAG, CI_TAG, branch])
+    if not merge:
+        print('Performing rebase...')
+        if len(branch):
+            git_exec(['rebase', '--onto', CC_TAG, CI_TAG, branch])
+        else:
+            git_exec(['checkout', '-b', CC_TAG])
+        tag(CI_TAG, CC_TAG)    
     else:
-        git_exec(['checkout', '-b', CC_TAG])
-    tag(CI_TAG, CC_TAG)
+        print('Performing merge...')
+        git_exec(['checkout', branch])
+        git_exec(['merge', CC_TAG])
+    
 
 def getCurrentBranch():
     for branch in git_exec(['branch']).split('\n'):
@@ -224,7 +234,7 @@ class Uncataloged(Changeset):
                 versions = list(filter(f, list(map(lambda x: x.split('|'), history.split('\n')))))
                 if len(versions) == 0:
                     raise Exception("It appears that you may be missing a branch (or have a mis-spelling) in the includes section of your gitcc config file.")  
-                self._add(added, version.strip())
+                self._add(added, versions[0][2].strip())
 
 class Version(object):
     def __init__(self,lsline):
