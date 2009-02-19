@@ -25,7 +25,7 @@ ARGS = {
 }
 
 def main(stash=False, dry_run=False, lshistory=False, load=None, merge=False):
-    if merge and not len(getCurrentBranch()) or getCurrentBranc() == CC_TAG:
+    if merge and not len(getCurrentBranch()) or getCurrentBranch() == CC_TAG:
         fail('You must be on a branch other then ' + CC_TAG + 'to use the --merge option')
     if not (stash or dry_run or lshistory):
         checkPristine()
@@ -53,11 +53,11 @@ def doCommit(cs, merge):
     commit(cs)
     if not merge:
         print('Performing rebase...')
-        if len(branch):
-            git_exec(['rebase', '--onto', CC_TAG, CI_TAG, branch])
-        else:
-            git_exec(['checkout', '-b', CC_TAG])
-        tag(CI_TAG, CC_TAG)    
+#        if len(branch):
+#            git_exec(['rebase', '--onto', CC_TAG, CI_TAG, branch])
+#        else:
+#            git_exec(['checkout', '-b', CC_TAG])
+#        tag(CI_TAG, CC_TAG)    
     else:
         print('Performing merge...')
         git_exec(['checkout', branch])

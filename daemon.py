@@ -16,8 +16,8 @@ SLEEP_TIME=cfg.get("sleep_time",5)
 
 def main():
     while loop():
-       print("Waiting" + SLEEP_TIME + "minutes for next sync")
-       time.sleep(SLEEP_TIME * 60)
+       print("Waiting " + SLEEP_TIME + " minutes for next sync")
+       time.sleep(60 * float(SLEEP_TIME))
 
 def loop():
     # Just in case we were are in a broken merge
@@ -25,27 +25,27 @@ def loop():
     git_exec(['pull'])
     try:
         rebase.main(merge=True)
-    except:
-        sendEmail(ADMIN_EMAIL,e)
+    except Exception as e:
+        sendEmail(ADMIN_EMAIL,str(e))
         return False
     merge = git_exec(['merge', CC_TAG])
     if merge.find('CONFLICT') >= 0:
         sendEmail(ADMIN_EMAIL,merge)
         return True
     try:
-        checkin.main()
+        checkin.main(sendmail=True)
         # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
         tag(CI_TAG,CHECKIN_BRANCH)
         git_exec(['push','origin',CHECKIN_BRANCH]);
-    except:
-        sendEmail(ADMIN_EMAIL,e)
+    except Exception as e:
+        sendEmail(ADMIN_EMAIL,str(e))
         # Someone just checked in - rebase again
         return False
     
     try:
         rebase.main(merge=True)
-    except:
-        sendEmail(ADMIN_EMAIL,e)
+    except Exception as e:
+        sendEmail(ADMIN_EMAIL,str(e))
         return False
     return True
 
