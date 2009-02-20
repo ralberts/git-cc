@@ -25,7 +25,7 @@ ARGS = {
 }
 
 def main(stash=False, dry_run=False, lshistory=False, load=None, merge=False):
-    if merge and not len(getCurrentBranch()) or getCurrentBranc() == CC_TAG:
+    if merge and not len(getCurrentBranch()) or getCurrentBranch() == CC_TAG:
         fail('You must be on a branch other then ' + CC_TAG + 'to use the --merge option')
     if not (stash or dry_run or lshistory):
         checkPristine()
