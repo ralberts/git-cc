@@ -1,3 +1,5 @@
+import smtplib
+
 from distutils import __version__
 v30 = __version__.find("3.") == 0
 
@@ -111,9 +113,10 @@ def buildPath(seq):
         return '\\'.join(seq).replace("/","\\")
 
 def sendEmail(to,message):
+    print("Sending email to ",to)
     if not cfg.get('smtp_host',None):
         print("Cannot send email, no smtp_host defined in gitcc config")
-    server = smtplib.SMTP(cfg.get('smpt_host'))
+    server = smtplib.SMTP(cfg.get('smtp_host'))
     server.sendmail('gitcc@no-reply.com', to, message)
     server.quit()
       

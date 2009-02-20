@@ -23,6 +23,7 @@ def main(force=False,sendmail=False):
     log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', CI_TAG + '..'])
     comment = []
     id = None
+    email = None
     def _commit():
         if not id:
             return
@@ -39,7 +40,7 @@ def main(force=False,sendmail=False):
             email = None
         if not id:
             id = line
-        else if not email:
+        elif not email:
             email = line
         else:
             comment.append(line)
@@ -106,7 +107,7 @@ class Transaction:
         for file in self.checkedout:
             cc_exec(['unco', '-rm', file])
         cc.rmactivity()
-    def commit(self, comment, email):
+    def commit(self, comment):
         for file in self.checkedout:
             cc_exec(['ci', '-identical', '-c', comment, file])
         cc.commit()
