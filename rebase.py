@@ -2,11 +2,15 @@
 
 from os.path import join, dirname, exists, isdir
 import os, stat, shutil, time
+
+from timeutil import *
+
 from common import *
 from datetime import datetime, timedelta
 from users import users, mailSuffix
 from fnmatch import fnmatch
 from clearcase import cc
+
 
 """
 Things remaining:
@@ -21,15 +25,18 @@ ARGS = {
     'dry_run': 'Prints a list of changesets to be imported',
     'lshistory': 'Prints the raw output of lshistory to be cached for load',
     'load': 'Loads the contents of a previously saved lshistory file',
-    'merge': 'Uses \'git merge\' instead of \'git rebase\' to sync the current branch'
+    'merge': 'Uses \'git merge\' instead of \'git rebase\' to sync the current branch',
+    'since': 'Override the date used to rebase from (use with caution)'
 }
 
-def main(stash=False, dry_run=False, lshistory=False, load=None, merge=False):
-    if merge and not len(getCurrentBranch()) or getCurrentBranch() == CC_TAG:
+
+def main(stash=False, dry_run=False, lshistory=False, load=None, merge=False, since=None):
+    if merge and not (len(getCurrentBranch()) or getCurrentBranch() == CC_TAG):
         fail('You must be on a branch other then ' + CC_TAG + 'to use the --merge option')
     if not (stash or dry_run or lshistory):
         checkPristine()
-    since = getSince()
+    if not since:
+        since = getSince()
     if load:
         history = open(load, 'r').read()
     else:
@@ -100,11 +107,14 @@ def getCurrentVersions():
     return versions
 
 def filterBranches(version):
-    version = version.split('\\')
-    version.pop()
-    version = version[-1]
+    version = extractElementBranch(version)
     for branch in cfg.getList('branches', 'main'):
-        if fnmatch(version, branch):
+        if branch == 'main':
+            branch = '\\main'
+        elif len(branch.split('\\')) == 1:
+            branch = '\\' + '\\'.join(['main', branch])
+        print("comparing",version,"to",branch)
+        if version == branch:
             return True
     return False
 
@@ -117,9 +127,12 @@ def parseHistory(lines,versions):
         if cstype in TYPES:
             cs = TYPES[cstype](split, comment)
             if filterBranches(cs.version):
-                if versions[cs.file].branch != cs.version.split('\\')[-2]:
-                    if datetime.fromtimestamp(os.path.getmtime(buildPath([CC_DIR,versions[cs.file].file]))) < datetime.strptime(cs.date[:-3], '%Y-%m-%dT%H:%M:%S'): 
+                print("comparing",versions[cs.file].branch, "and",extractElementBranch(cs.version))
+                #  TODO: what to do if the file doesn't exist in the current view? then we don't want the history for it...(right?)
+                if versions[cs.file].branch != extractElementBranch(cs.version):
+                    if datetime.fromtimestamp(os.path.getmtime(buildPath([CC_DIR,versions[cs.file].file]))) < parseClearcaseDate(cs.date): 
                         return
+                #print('added!')
                 changesets.append(cs)
     last = None
     comment = None
@@ -192,6 +205,12 @@ class Group:
 def cc_file(file, version):
     return '%s@@%s' % (file, version)
 
+def extractElementBranch(versionString):
+    print("extractElementBranch=>",versionString)
+    if len(versionString.split("\\")) == 1:
+        return versionString
+    return "\\".join(versionString.split("\\")[:-1])
+    
 class Changeset(object):
     def __init__(self, split, comment):
         self.date = split[1]
@@ -224,16 +243,29 @@ class Uncataloged(Changeset):
                 git_exec(['rm', '-r', getFile(line)])
             elif line.startswith('>'):
                 added = getFile(line)
-                cc_added = join(CC_DIR, added)
-                if not exists(cc_added) or isdir(cc_added) or added in files:
+                cc_added = buildPath([CC_DIR, added])
+                print('checking for ' + cc_added)
+                if not os.path.exists(cc_added) or isdir(cc_added) or added in files:
                     continue
                 history = cc_exec(['lshistory', '-fmt', '%o%m|%d|%Vn\\n', added])
                 date = cc_exec(['describe', '-fmt', '%d', dir])
                 def f(s):
-                    return s[0] == 'checkinversion' and s[1] < date and filterBranches(s[2])
+                    if s[0] == 'checkinversion' and s[1] < date:
+                        print('claiming',s[1],'is less then',date)
+                    elif s[0] == 'checkinversion' and s[1] > date:
+                        print ('claming',s[1],'is less then',date)
+                    return s[0] == 'checkinversion' and parseClearcaseDate(s[1]) < parseClearcaseDate(date) + timedelta(seconds=30) and filterBranches(s[2])
                 versions = list(filter(f, list(map(lambda x: x.split('|'), history.split('\n')))))
-                if len(versions) == 0:
-                    raise Exception("It appears that you may be missing a branch (or have a mis-spelling) in the includes section of your gitcc config file.")  
+                if len(versions) == 0:  # The file element must have been checked in AFTER the folder, look for the first checkin in the elements history that occurs after the folders' checkin.
+                    print("Could not find verison of file",added,"checked in prior to the folder (before",date,")...checking for checkins after")
+                    def g(s):
+                        return s[0] == 'checkinversion' and parseClearcaseDate(s[1]) >= parseClearcaseDate(date) and filterBranches(s[2])
+                    versions = list(filter(g, list(map(lambda x: x.split('|'), history.split('\n')))))
+                    if len(versions) == 0:
+                        raise Exception("It appears that you may be missing a branch (or have a mis-spelling) in the includes section of your gitcc config file.")  
+                    else:
+                        versions.reverse()
+                        print("Found version:",versions[0],"checked in on date",versions[0][1])
                 self._add(added, versions[0][2].strip())
 
 class Version(object):
@@ -241,8 +273,11 @@ class Version(object):
         split = lsline.split('@@')
         self.file = split[0]
         versionSplit = split[1].split('\\')
-        self.branch = versionSplit[-2]
-        self.version = versionSplit[-1]
+        if len(versionSplit) > 1:
+            self.version = versionSplit[-1]
+        else:
+            self.version = ''
+        self.branch = extractElementBranch(split[1])
 
 TYPES = {\
     'checkinversion': Changeset,\
