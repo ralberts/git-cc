@@ -9,7 +9,7 @@ def main(glob):
     base = abspath(CC_DIR)
     for i in cfg.getList('include', '.'):
         for (dirpath, dirnames, filenames) in os.walk(join(CC_DIR, i)):
-            reldir = dirpath[len(base)+1:]
+            reldir = dirpath[len(base):]
             for file in filenames:
                 if fnmatch(file, glob):
                     newFile = join(GIT_DIR, reldir, file)
