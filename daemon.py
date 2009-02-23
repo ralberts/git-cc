@@ -21,33 +21,47 @@ def main():
 
 def loop():
     # Just in case we were are in a broken merge
-    git_exec(['checkout', '-f', CHECKIN_BRANCH])
-    git_exec(['pull'])
+    git._exec(['checkout', '-f', CHECKIN_BRANCH])
+    git._exec(['pull'])
     try:
-        rebase.main(merge=True)
+        aquire.main()
     except Exception as e:
-        sendEmail(ADMIN_EMAIL,str(e))
+        sendEmail(ADMIN_EMAIL,"Error encountered when retrieving clearcase history",str(e))
         return False
-    merge = git_exec(['merge', CC_TAG])
+    merge = git._exec(['merge', CC_TAG])
     if merge.find('CONFLICT') >= 0:
-        sendEmail(ADMIN_EMAIL,merge)
+        sendEmail(ADMIN_EMAIL,"Merge Needed!",merge)
         return True
     try:
+        ## Run pull, and pull an additional changes
+        pull = git._exec(["pull"])
+        if pull.find('CONFLICT') >= 0:
+            sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
+            return True
         checkin.main(sendmail=True)
         # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
         tag(CI_TAG,CHECKIN_BRANCH)
         git_exec(['push','origin',CHECKIN_BRANCH]);
     except Exception as e:
-        sendEmail(ADMIN_EMAIL,str(e))
-        # Someone just checked in - rebase again
+        sendEmail(ADMIN_EMAIL,"Error during checkin!",str(e))
         return False
-    
     try:
-        rebase.main(merge=True)
+        merge.main()
     except Exception as e:
-        sendEmail(ADMIN_EMAIL,str(e))
+        sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
         return False
     return True
+
+def sendEmail(to,subject,content):
+    sender = 'gitcc@no-reply.com'
+    print("Sending email to ",to)
+    headers = "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % (sender, to, subject)
+    message = headers + content
+    if not cfg.get('smtp_host',None):
+        print("Cannot send email, no smtp_host defined in gitcc config")
+    server = smtplib.SMTP(cfg.get('smtp_host'))
+    server.sendmail(sender, to, message)
+    server.quit()
 
 if __name__ == '__main__':
     main()

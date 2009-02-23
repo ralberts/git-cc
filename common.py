@@ -101,14 +101,6 @@ def buildPath(seq):
      else:
         return '\\'.join(seq).replace("/","\\")
 
-def sendEmail(to,message):
-    print("Sending email to ",to)
-    if not cfg.get('smtp_host',None):
-        print("Cannot send email, no smtp_host defined in gitcc config")
-    server = smtplib.SMTP(cfg.get('smtp_host'))
-    server.sendmail('gitcc@no-reply.com', to, message)
-    server.quit()
-      
 def getClearcaseDatetime(timestamp):
     # Strip off UTC, as this is not handled well by pythong.
     if len(timestamp) > 22: # UTC offset is -HH:MM (happens on windows 2003 server) 

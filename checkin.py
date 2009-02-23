@@ -111,3 +111,14 @@ class Transaction:
         for file in self.checkedout:
             cc_exec(['ci', '-identical', '-c', comment, file])
         cc.commit()
+
+def sendEmail(to,subject,content):
+    sender = 'gitcc@no-reply.com'
+    print("Sending email to ",to)
+    headers = "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % (sender, to, subject)
+    message = headers + content
+    if not cfg.get('smtp_host',None):
+        print("Cannot send email, no smtp_host defined in gitcc config")
+    server = smtplib.SMTP(cfg.get('smtp_host'))
+    server.sendmail(sender, to, message)
+    server.quit()
