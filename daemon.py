@@ -27,7 +27,7 @@ def loop():
     git._exec(['checkout', '-f', CHECKIN_BRANCH])
     git._exec(['pull'])
     try:
-        aquire.main()
+        acquire.main()
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error encountered when retrieving clearcase history",str(e))
         return False
