@@ -1,7 +1,10 @@
-"""Rebase from Clearcase"""
+"""Imports the latest history from clearcase into the "clearcase" branch,
+and merges the clearcase branch to the current branch"""
 
 from os.path import join, dirname, exists, isdir
 import os, stat, shutil, time
+
+from timeutil import *
 
 import acquire
 
@@ -26,18 +29,13 @@ ARGS = {
 
 
 def main(stash=False, dry_run=False, lshistory=False, load=None, since=None):
-    if git.getCurrentBranch() == CC_TAG:
-        print("Cannot rebase",CC_TAG,"""onto itself (well, I could, but what is the point?).\n  
-            Please choose another branch and try again.""")
+    if not (len(git.getCurrentBranch()) or git.getCurrentBranch() == CC_TAG):
+        fail('You must be on a branch other then ' + CC_TAG + 'to use the gitcc merge')
     branch = git.getCurrentBranch()
     if not (stash or dry_run or lshistory):
         git.checkPristine()
     acquire.main(since=since,load=load,lshistory=lshistory,dry_run=dry_run)
-    if not dry_run:
-        print('Performing rebase...')
-        if len(branch):
-            git._exec(['rebase', '--onto', CC_TAG, CI_TAG, branch])
-        else:
-            git._exec(['checkout', '-b', CC_TAG])
-        tag(CI_TAG, CC_TAG)    
-
+    
+    print('Performing merge...')
+    git.checkout(branch)
+    git.merge(CC_TAG)

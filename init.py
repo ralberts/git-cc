@@ -14,3 +14,10 @@ def main(ccdir):
         write(join(GIT_DIR, '.git', 'info', 'exclude'), excludes.encode())
     cfg.set(CFG_CC, ccdir)
     cfg.write()
+    
+    # Create clearcase branch
+    if not git.branchExists('clearcase'):
+        git.createBranch('clearcase')
+        
+    
+       

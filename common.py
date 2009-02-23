@@ -1,5 +1,5 @@
 import smtplib
-
+from datetime import datetime, timedelta
 from distutils import __version__
 v30 = __version__.find("3.") == 0
 
@@ -20,13 +20,6 @@ ENCODING = sys.stdin.encoding
 def fail(string):
     print(string)
     sys.exit(2)
-
-def doStash(f, stash):
-    if(stash):
-        git_exec(['stash'])
-    f()
-    if(stash):
-        git_exec(['stash', 'pop'])
 
 def debug(string):
     if DEBUG:
@@ -82,11 +75,7 @@ class GitConfigParser():
     def getList(self, name, default=None):
         return self.get(name, default).split('|')
 
-def checkPristine():
-    if not CC_DIR:
-        fail('No .git directory found')
-    if(len(git_exec(['ls-files', '--modified']).splitlines()) > 0):
-        fail('There are uncommitted files in your git directory')
+
 
 def write(file, blob):
     _write(file, blob)
@@ -120,7 +109,16 @@ def sendEmail(to,message):
     server.sendmail('gitcc@no-reply.com', to, message)
     server.quit()
       
-        
+def getClearcaseDatetime(timestamp):
+    # Strip off UTC, as this is not handled well by pythong.
+    if len(timestamp) > 22: # UTC offset is -HH:MM (happens on windows 2003 server) 
+        time = timestamp[:-6]
+    else: # UTC offset is -HH
+        time = timestamp[:-3]
+    return datetime.strptime(time, '%Y-%m-%dT%H:%M:%S')        
+
+
+    
 GIT_DIR = gitDir()
 cfg = GitConfigParser()
 if exists(join(GIT_DIR, '.git')):
