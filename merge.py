@@ -4,8 +4,6 @@ and merges the clearcase branch to the current branch"""
 from os.path import join, dirname, exists, isdir
 import os, stat, shutil, time
 
-from timeutil import *
-
 import acquire
 
 from common import *

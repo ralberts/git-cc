@@ -3,8 +3,6 @@
 from os.path import join, dirname, exists, isdir
 import os, stat, shutil, time
 
-from timeutil import *
-
 from common import *
 from datetime import datetime, timedelta
 from users import users, mailSuffix
