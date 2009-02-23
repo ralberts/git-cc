@@ -2,7 +2,10 @@
 import time
 import smtplib
 from common import *
-import rebase, checkin, update, reset, git, clearcase
+from git import *
+from clearcase import *
+
+import rebase, checkin, update, merge
 
 """ 
 Config Options Used By Daemon
