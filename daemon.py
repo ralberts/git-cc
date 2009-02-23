@@ -44,7 +44,6 @@ def loop():
         checkin.main(sendmail=True)
         # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
         tag(CI_TAG,CHECKIN_BRANCH)
-        git_exec(['push','origin',CHECKIN_BRANCH]);
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during checkin!",str(e))
         return False
@@ -54,6 +53,13 @@ def loop():
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
         return False
     return True
+    try: 
+        git._exec(['push','origin',CHECKIN_BRANCH])
+        git._exec(['push','origin',CC_TAG])
+    except Exception as e:
+        sendEmail(ADMIN_EMAIL,"Error during post checkin push!",str(e))
+        return False
+        
 
 def sendEmail(to,subject,content):
     sender = 'gitcc@no-reply.com'
