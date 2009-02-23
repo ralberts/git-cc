@@ -52,13 +52,13 @@ def loop():
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
         return False
-    return True
     try: 
         git._exec(['push','origin',CHECKIN_BRANCH])
         git._exec(['push','origin',CC_TAG])
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin push!",str(e))
         return False
+    return True
         
 
 def sendEmail(to,subject,content):
