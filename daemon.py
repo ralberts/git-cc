@@ -5,7 +5,7 @@ from common import *
 from git import *
 from clearcase import *
 
-import rebase, checkin, update, merge
+import rebase, checkin, update, merge, acquire
 
 """ 
 Config Options Used By Daemon
