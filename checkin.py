@@ -30,7 +30,7 @@ def main(force=False,sendmail=False):
         statuses = getStatuses(id)
         checkout(statuses, '\n'.join(comment))
         if SEND_MAIL:
-            sendEmail(email,"Your commit with id " + id + " has been checked into clearcase")
+            sendEmail(email,"Your commit", "Your commit with id " + id + " has been checked into clearcase")
         tag(CI_TAG, id)
     for line in log.splitlines():
         if line == "":
