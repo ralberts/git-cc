@@ -31,9 +31,9 @@ def loop():
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error encountered when retrieving clearcase history",str(e))
         return False
-    merge = git._exec(['merge', CC_TAG])
-    if merge.find('CONFLICT') >= 0:
-        sendEmail(ADMIN_EMAIL,"Merge Needed!",merge)
+    output = git._exec(['merge', CC_TAG])
+    if output.find('CONFLICT') >= 0:
+        sendEmail(ADMIN_EMAIL,"Merge Needed!",output)
         return True
     try:
         ## Run pull, and pull an additional changes
