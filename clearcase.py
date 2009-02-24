@@ -80,7 +80,7 @@ class Clearcase:
         if elm.path in cls.currentVersions:
             return cls.currentVersions[elm.path]
         if os.path.exists(elm.getAbsolutePath()):
-            split = cls._exec(['ls','-short',elm.path]).split("@@")
+            split = cls._exec(['ls','-short',elm.path]).splitlines()[0].split("@@")
             if len(split) < 2:
             	return None
             cls.currentVersions[split[0]] = Element(split[0],split[1])
