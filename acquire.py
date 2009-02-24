@@ -43,7 +43,7 @@ def main(stash=False, dry_run=False, lshistory=False, load=None, since=None):
         checkins.sort(key = lambda x: x.date)
         groups = mergeHistory(checkins)
         if dry_run:
-            return printGroups(checkins)
+            return printGroups(groups)
         if not len(checkins):
             return
         git.doStash(lambda: doCommit(groups), stash)
@@ -88,10 +88,10 @@ def mergeHistory(changesets):
     return groups
 
 def printGroups(groups):
-    for cs in groups:
-        print('%s "%s"' % (cs.user, cs.subject))
-        for file in cs.files:
-            print("  %s" % file.file)
+    for group in groups:
+        print('%s "%s"' % (group.user, group.subject))
+        for file in group.files:
+            print("  %s" % file.path)
 
 def commitGroup(group):
     def getUserEmail(user):
