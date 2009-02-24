@@ -122,15 +122,18 @@ def addElement(elm):
     elif elm.type == "DIRECTORY":
         elm.getAddedRemoved();
         for added in elm.added:
-            fakelm = Element(added,"")
-            versions = cc.getElementHistory(fakelm,_filter=chainFilters([branchFilter,dateRangeFilter(toDate=elm.date)]))
-            if len(versions) < 1:
-                versions = cc.getElementHistory(fakelm,since=elm.date,_filter=branchFilter)
-                versions.reverse()
-                if len(versions) <1:
-                    print("Cannot find a version of the file ",fakelm.path,"to add to directory",elm.path)
-                    continue
-            addElement(versions.pop())
+            print("Checking if",added,"already exists")
+            if not os.path.exists(added):
+                print("Adding directory element",added)
+                fakelm = Element(added,"")
+                versions = cc.getElementHistory(fakelm,_filter=chainFilters([branchFilter,dateRangeFilter(toDate=elm.date)]))
+                if len(versions) < 1:
+                    versions = cc.getElementHistory(fakelm,since=elm.date,_filter=branchFilter)
+                    versions.reverse()
+                    if len(versions) <1:
+                        print("Cannot find a version of the file ",fakelm.path,"to add to directory",elm.path)
+                        continue
+                addElement(versions.pop())
         for removed in elm.removed:
             git.remove(removed)
             
