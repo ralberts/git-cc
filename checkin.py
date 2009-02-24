@@ -99,6 +99,9 @@ class Transaction:
         self.co(file)
         ccid = git_exec(['hash-object', join(CC_DIR, file)])[0:-1]
         gitid = getBlob(git_exec(['merge-base', CI_TAG, 'HEAD']).strip(), file)
+        print("object hash of object in clearcase = ",ccid);
+        print("object hash of parent object in git = ",gitid);
+
         if ccid != gitid:
             if not IGNORE_CONFLICTS:
                 raise Exception('File has been modified: %s. Try rebasing.' % file)

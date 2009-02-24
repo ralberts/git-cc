@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 import time
 import smtplib
 from common import *
