@@ -13,6 +13,8 @@ admin_email = email of administrator to notify of changes, or when things go wro
 checkin_branch = git branch to monitor for commits to be checked into clearcase
 sleep_time = amount of time in minutes to wait between synchronizations
 """
+ARGS = {}
+
 CHECKIN_BRANCH= cfg.get("checkin_branch","")
 ADMIN_EMAIL=cfg.get("admin_email","")
 SLEEP_TIME=cfg.get("sleep_time",5)
