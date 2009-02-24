@@ -33,7 +33,6 @@ def main(stash=False, dry_run=False, lshistory=False, load=None, since=None):
     if not (stash or dry_run or lshistory):
         git.checkPristine()
     acquire.main(since=since,load=load,lshistory=lshistory,dry_run=dry_run)
-
     print('Performing merge...')
     git.checkout(branch)
     git.merge(CC_TAG)

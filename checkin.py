@@ -130,6 +130,6 @@ def sendEmail(to,subject,content):
 def sendSummaryMessage(to,commit_id):
     summary =  git_exec(['diff','--name-status', '-z', '%s^..%s' % (commit_id, commit_id)])
     subject = "Your commit <b>" + commit_id + "</b> has been checked into clearcase";
-    message += subject + "<br/><br/>"
+    message = subject + "<br/><br/>"
     message += summary
     sendEmail(to, subject, message)
