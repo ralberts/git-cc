@@ -49,10 +49,10 @@ def getBlob(sha, file):
 
 def gitDir():
     def findGitDir(dir):
-        if not exists(dir) or dirname(dir) == dir:
-            return '.'
         if exists(join(dir, '.git')):
             return dir
+        if not exists(dir) or dirname(dir) == dir:
+            return '.'
         return findGitDir(dirname(dir))
     return findGitDir(abspath('.'))
 
