@@ -11,6 +11,7 @@ IGNORE_CONFLICTS=False
 SEND_MAIL=False
 ARGS = {
     'force': 'ignore conflicts and check-in anyway',
+    'sendmail':'send mail to commiter after the checkin is complete'
 }
 
 def main(force=False,sendmail=False):
