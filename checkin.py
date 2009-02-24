@@ -31,7 +31,7 @@ def main(force=False,sendmail=False):
         statuses = getStatuses(id)
         checkout(statuses, '\n'.join(comment))
         if SEND_MAIL:
-            sendEmail(email,"Your commit", "Your commit with id " + id + " has been checked into clearcase")
+            sendSummaryMessage(email,id)
         tag(CI_TAG, id)
     for line in log.splitlines():
         if line == "":
@@ -126,3 +126,10 @@ def sendEmail(to,subject,content):
     server = smtplib.SMTP(cfg.get('smtp_host'))
     server.sendmail(sender, to, message)
     server.quit()
+
+def sendSummaryMessage(to,commit_id):
+    summary =  git_exec(['diff','--name-status', '-z', '%s^..%s' % (commit_id, commit_id)])
+    subject = "Your commit <b>" + commit_id + "</b> has been checked into clearcase";
+    message += subject + "<br/><br/>"
+    message += summary
+    sendEmail(to, subject, message)
