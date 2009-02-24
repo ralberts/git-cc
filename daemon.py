@@ -1,3 +1,4 @@
+""" Daemon that automatically syncs a git branch with your clearcase view """
 
 import time
 import smtplib
