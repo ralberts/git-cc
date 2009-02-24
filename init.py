@@ -1,6 +1,7 @@
 """Initialise gitcc with a clearcase directory"""
 
 from common import *
+from git import *
 from os import open
 from os.path import join, exists
 
