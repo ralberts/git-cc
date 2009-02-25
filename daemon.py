@@ -22,7 +22,7 @@ CHECKIN_BRANCH= cfg.get("checkin_branch","")
 ADMIN_EMAIL=cfg.get("admin_email","")
 SLEEP_TIME=cfg.get("sleep_time",5)
 
-def main(no_checkin:True):
+def main(no_checkin=False):
     while loop(no_checkin):
        print("Waiting " + SLEEP_TIME + " minutes for next sync")
        time.sleep(60 * float(SLEEP_TIME))
@@ -36,7 +36,7 @@ def loop(no_checkin):
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error encountered when retrieving clearcase history",str(e))
         return False
-    output = git._exec(['merge', CC_TAG])
+        output = git._exec(['merge', CC_TAG])
     if output.find('CONFLICT') >= 0:
         sendEmail(ADMIN_EMAIL,"Merge Needed!",output)
         return True
