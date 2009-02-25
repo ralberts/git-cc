@@ -26,27 +26,34 @@ ARGS = {
 }
 
 def main(stash=False, dry_run=False, lshistory=False, load=None, since=None):
-    checkRepo()
-    if not (stash or dry_run or lshistory):
-        git.checkPristine()
-    if not since:
-        since = getSince()
-    if load:
-        history = open(load, 'r').read()
-    else:
-        history = cc.getViewHistory(since,raw=True)
-    
-    if lshistory:
-        print(history)
-    else:
-        checkins = cc.parseHistory(history,_filter=onlyAncestorsFilter)
-        checkins.sort(key = lambda x: x.date)
-        groups = mergeHistory(checkins)
-        if dry_run:
-            return printGroups(groups)
-        if not len(checkins):
-            return
-        git.doStash(lambda: doCommit(groups), stash)
+    currentBranch = git.getCurrentBranch();
+    try:
+        checkRepo()
+        if not (stash or dry_run or lshistory):
+            git.checkPristine()
+        if not since:
+            since = getSince()
+        if load:
+            history = open(load, 'r').read()
+        else:
+            history = cc.getViewHistory(since,raw=True)
+        
+        if lshistory:
+            print(history)
+        else:
+            checkins = cc.parseHistory(history,_filter=onlyAncestorsFilter)
+            checkins.sort(key = lambda x: x.date)
+            groups = mergeHistory(checkins)
+            if dry_run:
+                return printGroups(groups)
+            if not len(checkins):
+                return
+            git.doStash(lambda: doCommit(groups), stash)
+    except Exception as e:
+        print("There was a failure, checking out branch",currentBranch)
+        git._exec(['checkout','-f',currentBranch])
+        raise e
+    git.checkout(currentBranch);
 
 # Check the repo to ensure that the "clearcase" branch exists
 def checkRepo():
