@@ -53,9 +53,12 @@ class Git(object):
     def merge(self,branch):
         self._exec(['merge',branch])
         
-    def checkout(self,branchname):
-        self._exec(['checkout',branchname],True)
-        
+    def checkout(self,branchname,force=False):
+        if force:
+            self._exec(['checkout','-f',branchname],True)
+        else:
+            self._exec(['checkout',branchname],True)
+            
     def checkoutPath(self,ref,path,check=False):
         self._exec(['checkout',ref,path,check])
         
@@ -76,6 +79,10 @@ class Git(object):
         f()
         if(stash):
             self._exec(['stash', 'pop'])
+            
+    def tag(self, tag, id="HEAD"):
+        git_exec(['tag', '-f', tag, id])            
+
 git = Git()        
         
 class Commit(object):
