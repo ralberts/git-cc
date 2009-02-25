@@ -36,4 +36,3 @@ def main(stash=False, dry_run=False, lshistory=False, load=None, since=None):
     print('Performing merge...')
     git.checkout(branch)
     git.merge(CC_TAG)
-    tag(CI_TAG, CC_TAG)    
