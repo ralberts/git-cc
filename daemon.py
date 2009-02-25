@@ -14,18 +14,20 @@ admin_email = email of administrator to notify of changes, or when things go wro
 checkin_branch = git branch to monitor for commits to be checked into clearcase
 sleep_time = amount of time in minutes to wait between synchronizations
 """
-ARGS = {}
+ARGS = {
+        'no_checkin' : 'No checkin occurs, only history imports from clearcase'
+}
 
 CHECKIN_BRANCH= cfg.get("checkin_branch","")
 ADMIN_EMAIL=cfg.get("admin_email","")
 SLEEP_TIME=cfg.get("sleep_time",5)
 
-def main():
-    while loop():
+def main(no_checkin:True):
+    while loop(no_checkin):
        print("Waiting " + SLEEP_TIME + " minutes for next sync")
        time.sleep(60 * float(SLEEP_TIME))
 
-def loop():
+def loop(no_checkin):
     # Just in case we were are in a broken merge
     git._exec(['checkout', '-f', CHECKIN_BRANCH])
     git._exec(['pull'])
@@ -45,9 +47,10 @@ def loop():
         if pull.find('CONFLICT') >= 0:
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
             return True
-        checkin.main(sendmail=True)
-        # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
-        tag(CI_TAG,CHECKIN_BRANCH)
+        if not no_checkin:
+            checkin.main(sendmail=True)
+            # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
+            tag(CI_TAG,CHECKIN_BRANCH)
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during checkin!",str(e))
         return False
