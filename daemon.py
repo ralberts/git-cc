@@ -40,6 +40,7 @@ def loop():
         return True
     try:
         ## Run pull, and pull an additional changes
+        git.checkout(CHECKIN_BRANCH);
         pull = git._exec(["pull"])
         if pull.find('CONFLICT') >= 0:
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
