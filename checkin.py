@@ -22,7 +22,7 @@ def main(force=False,sendmail=False):
     if sendmail:
         SEND_MAIL=True
     cc_exec(['update', '.'])
-    log = git_exec(['log', '--first-parent', '--reverse', '-no-merges','--pretty=format:%H%n%ce%n%s%n%b', CI_TAG + '..'])
+    log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', CI_TAG + '..'])
     comment = []
     id = None
     email = None

@@ -32,13 +32,13 @@ def loop(no_checkin):
     # Just in case we were are in a broken merge
     git._exec(['checkout', '-f', CHECKIN_BRANCH])
     git._exec(['pull'])
-    try:
-        acquire.main()
-        git._exec(['merge',CC_TAG,'--squash'])
-        git.commit('gitcc merge from clearcase');
-    except Exception as e:
-        sendEmail(ADMIN_EMAIL,"Error encountered when retrieving clearcase history",str(e))
-        return False
+#    try:
+#        acquire.main()
+#        git._exec(['merge',CC_TAG,'--squash'])
+#        git.commit('gitcc merge from clearcase');
+#    except Exception as e:
+#        sendEmail(ADMIN_EMAIL,"Error encountered when retrieving clearcase history",str(e))
+#        return False
     try:
         ## Run pull, and pull an additional changes
         git.checkout(CHECKIN_BRANCH);
