@@ -14,11 +14,12 @@ admin_email = email of administrator to notify of changes, or when things go wro
 checkin_branch = git branch to monitor for commits to be checked into clearcase
 sleep_time = amount of time in minutes to wait between synchronizations
 """
+
 ARGS = {
-        'no_checkin' : 'No checkin occurs, only history imports from clearcase'
+    'no_checkin' : 'No checkin occurs, only history imports from clearcase'
 }
 
-CHECKIN_BRANCH= cfg.get("checkin_branch","")
+CHECKIN_BRANCH=cfg.get("checkin_branch","")
 ADMIN_EMAIL=cfg.get("admin_email","")
 SLEEP_TIME=cfg.get("sleep_time",5)
 
@@ -36,7 +37,7 @@ def loop(no_checkin):
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error encountered when retrieving clearcase history",str(e))
         return False
-        output = git._exec(['merge', CC_TAG])
+    output = git._exec(['merge', CC_TAG])
     if output.find('CONFLICT') >= 0:
         sendEmail(ADMIN_EMAIL,"Merge Needed!",output)
         return True
