@@ -83,7 +83,7 @@ class Clearcase:
             ls = cls._exec(['ls','-short',elm.path])
             split = []
             if len(ls):
-                split = splitlines()[0].split("@@")
+                split = ls.splitlines()[0].split("@@")
                 if len(split) < 2:
                 	return None
             cls.currentVersions[split[0]] = Element(split[0],split[1])
