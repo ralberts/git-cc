@@ -15,14 +15,14 @@ ARGS = {
     'sendmail':'send mail to commiter after the checkin is complete'
 }
 
-def main(force=False,sendmail=False):
+def main(force=False,sendmail=False,checkin_branch="HEAD"):
     global IGNORE_CONFLICTS, SEND_MAIL
     if force:
         IGNORE_CONFLICTS=True
     if sendmail:
         SEND_MAIL=True
     cc_exec(['update', '.'])
-    log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', CI_TAG + '..HEAD'])
+    log = git_exec(['log', '--first-parent', '--reverse', '-no-merges','--pretty=format:%H%n%ce%n%s%n%b', CC_TAG + '..' + checkin_branch])
     comment = []
     id = None
     email = None
@@ -33,7 +33,7 @@ def main(force=False,sendmail=False):
         checkout(statuses, '\n'.join(comment))
         if SEND_MAIL:
             sendSummaryMessage(email,id)
-        tag(CI_TAG, id)
+        #tag(CI_TAG, id)
     for line in log.splitlines():
         if line == "":
             _commit()
@@ -95,7 +95,7 @@ class Transaction:
         global IGNORE_CONFLICTS    
         self.co(file)
         ccid = git_exec(['hash-object', join(CC_DIR, file)])[0:-1]
-        gitid = getBlob(git_exec(['merge-base', CI_TAG, 'HEAD']).strip(), file)
+        gitid = getBlob(git_exec(['merge-base', CC_TAG, 'HEAD']).strip(), file)
         print("object hash of object in clearcase = ",ccid);
         print("object hash of parent object in git = ",gitid);
 

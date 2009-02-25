@@ -50,10 +50,8 @@ def loop(no_checkin):
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
             return True
         if not no_checkin:
-            checkin.main(sendmail=True)
+            checkin.main(sendmail=True, checkin_branch=CHECKIN_BRANCH)
             # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
-            git.checkout(CHECKIN_BRANCH,force=True)
-            tag(CI_TAG,CHECKIN_BRANCH)
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during checkin!",str(e))
         return False
