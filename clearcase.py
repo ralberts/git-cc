@@ -86,8 +86,10 @@ class Clearcase:
                 split = ls.splitlines()[0].split("@@")
                 if len(split) < 2:
                 	return None
-            cls.currentVersions[split[0]] = Element(split[0],split[1])
-            return cls.currentVersions[split[0]]
+                cls.currentVersions[split[0]] = Element(split[0],split[1])
+                return cls.currentVersions[split[0]]
+            else:
+                return None
         else:
             return None
 
