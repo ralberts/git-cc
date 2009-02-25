@@ -60,7 +60,7 @@ class Git(object):
         self._exec(['checkout',ref,path,check])
         
     def getLastCommit(self,branchname):
-        line = self._exec(['log', '-n', '1', '--pretty=format:%H?*?%ce?*?%cn?*?%ai?*?%s?*?%b', '%s' % CI_TAG])
+        line = self._exec(['log', '-n', '1', '--pretty=format:%H?*?%ce?*?%cn?*?%ai?*?%s?*?%b', '%s' % branchname])
         split = line.split("?*?")
         return Commit(split[0],split[3],split[2],split[1],split[4] + '\n' + split[5])
 
