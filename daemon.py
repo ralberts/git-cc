@@ -82,7 +82,7 @@ def sendSummaryMessage(to,commit_id):
     message += summary
     try:
         sendEmail(to, subject, message)
-    except Exception(e):
+    except Exception as e:
         message = "Error when sending commit summary email to " + to + "\n\n" + str(e)
         message += "\n\n The user probably needs to set the correct email in .git/config"
         sendEmail(ADMIN_EMAIL,"Error when sending summary email",message)
