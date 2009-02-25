@@ -33,10 +33,9 @@ def loop(no_checkin):
     git._exec(['checkout', '-f', CHECKIN_BRANCH])
     git._exec(['pull'])
     try:
-        merge.main()
-        lastCommit = git.getLastCommit(CC_TAG)
-        git.tag(CI_TAG,lastCommit.UUID)
-        output = git._exec(['merge', CC_TAG])
+        output = merge.main()
+        #lastCommit = git.getLastCommit(CC_TAG)
+        #git.tag(CI_TAG,lastCommit.UUID)
         if output.find('CONFLICT') >= 0:
             sendEmail(ADMIN_EMAIL,"Merge Needed!",output)
             return True
@@ -53,14 +52,15 @@ def loop(no_checkin):
         if not no_checkin:
             checkin.main(sendmail=True)
             # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
+            git.checkout(CHECKIN_BRANCH,force=True)
             tag(CI_TAG,CHECKIN_BRANCH)
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during checkin!",str(e))
         return False
     try:
         merge.main()
-        lastCommit = git.getLastCommit(CC_TAG)
-        git.tag(CI_TAG,lastCommit.UUID)
+        #lastCommit = git.getLastCommit(CC_TAG)
+        #git.tag(CI_TAG,lastCommit.UUID)
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
         return False

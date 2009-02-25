@@ -51,7 +51,7 @@ class Git(object):
         self._exec(['add',path],check)
         
     def merge(self,branch):
-        self._exec(['merge',branch])
+        return self._exec(['merge',branch])
         
     def checkout(self,branchname,force=False):
         if force:

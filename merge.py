@@ -35,4 +35,4 @@ def main(stash=False, dry_run=False, lshistory=False, load=None, since=None):
     acquire.main(since=since,load=load,lshistory=lshistory,dry_run=dry_run)
     print('Performing merge...')
     git.checkout(branch)
-    git.merge(CC_TAG)
+    return git.merge(CC_TAG)
