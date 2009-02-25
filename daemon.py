@@ -75,5 +75,17 @@ def sendEmail(to,subject,content):
     server.sendmail(sender, to, message)
     server.quit()
 
+def sendSummaryMessage(to,commit_id):
+    summary =  git_exec(['diff','--name-status', '-z', '%s^..%s' % (commit_id, commit_id)])
+    subject = "Your commit <b>" + commit_id + "</b> has been checked into clearcase";
+    message = subject + "<br/><br/>"
+    message += summary
+    try:
+        sendEmail(to, subject, message)
+    except Exception(e):
+        message = "Error when sending commit summary email to " + to + "\n\n" + str(e)
+        message += "\n\n The user probably needs to set the correct email in .git/config"
+        sendEmail(ADMIN_EMAIL,"Error when sending summary email",message)
+        
 if __name__ == '__main__':
     main()

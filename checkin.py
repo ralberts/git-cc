@@ -1,6 +1,7 @@
 """Checkin new git changesets to Clearcase"""
 
 from common import *
+from daemon import *
 from clearcase import cc
 from status import Modify, Add, Delete, Rename
 import filecmp
@@ -116,20 +117,3 @@ class Transaction:
             cc_exec(['ci', '-identical', '-c', comment, file])
         cc.commit()
 
-def sendEmail(to,subject,content):
-    sender = 'gitcc@no-reply.com'
-    print("Sending email to ",to)
-    headers = "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % (sender, to, subject)
-    message = headers + content
-    if not cfg.get('smtp_host',None):
-        print("Cannot send email, no smtp_host defined in gitcc config")
-    server = smtplib.SMTP(cfg.get('smtp_host'))
-    server.sendmail(sender, to, message)
-    server.quit()
-
-def sendSummaryMessage(to,commit_id):
-    summary =  git_exec(['diff','--name-status', '-z', '%s^..%s' % (commit_id, commit_id)])
-    subject = "Your commit <b>" + commit_id + "</b> has been checked into clearcase";
-    message = subject + "<br/><br/>"
-    message += summary
-    sendEmail(to, subject, message)
