@@ -47,7 +47,7 @@ def loop(no_checkin):
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
             return True
         if not no_checkin:
-            checkin.main(sendmail=True, checkin_branch=CHECKIN_BRANCH)
+            checkin.main(sendmail=True)
             # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during checkin!",str(e))
