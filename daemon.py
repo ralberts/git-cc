@@ -33,12 +33,9 @@ def loop(no_checkin):
     git._exec(['checkout', '-f', CHECKIN_BRANCH])
     git._exec(['pull'])
     try:
-        output = merge.main()
-        #lastCommit = git.getLastCommit(CC_TAG)
-        #git.tag(CI_TAG,lastCommit.UUID)
-        if output.find('CONFLICT') >= 0:
-            sendEmail(ADMIN_EMAIL,"Merge Needed!",output)
-            return True
+        acquire.main()
+        git._exec(['merge',CC_TAG,'--squash'])
+        git.commit('gitcc merge from clearcase');
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error encountered when retrieving clearcase history",str(e))
         return False
@@ -56,9 +53,9 @@ def loop(no_checkin):
         sendEmail(ADMIN_EMAIL,"Error during checkin!",str(e))
         return False
     try:
-        merge.main()
-        #lastCommit = git.getLastCommit(CC_TAG)
-        #git.tag(CI_TAG,lastCommit.UUID)
+        acquire.main()
+        git._exec(['merge',CC_TAG,'--squash'])
+        git.commit('gitcc merge from clearcase');
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
         return False

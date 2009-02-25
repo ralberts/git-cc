@@ -15,14 +15,14 @@ ARGS = {
     'sendmail':'send mail to commiter after the checkin is complete'
 }
 
-def main(force=False,sendmail=False,checkin_branch="HEAD"):
+def main(force=False,sendmail=False):
     global IGNORE_CONFLICTS, SEND_MAIL
     if force:
         IGNORE_CONFLICTS=True
     if sendmail:
         SEND_MAIL=True
     cc_exec(['update', '.'])
-    log = git_exec(['log', '--first-parent', '--reverse', '-no-merges','--pretty=format:%H%n%ce%n%s%n%b', CC_TAG + '..' + checkin_branch])
+    log = git_exec(['log', '--first-parent', '--reverse', '-no-merges','--pretty=format:%H%n%ce%n%s%n%b', CI_TAG + '..'])
     comment = []
     id = None
     email = None
@@ -33,7 +33,7 @@ def main(force=False,sendmail=False,checkin_branch="HEAD"):
         checkout(statuses, '\n'.join(comment))
         if SEND_MAIL:
             sendSummaryMessage(email,id)
-        #tag(CI_TAG, id)
+        tag(CI_TAG, id)
     for line in log.splitlines():
         if line == "":
             _commit()
