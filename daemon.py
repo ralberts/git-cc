@@ -23,6 +23,8 @@ CHECKIN_BRANCH=cfg.get("checkin_branch","")
 ADMIN_EMAIL=cfg.get("admin_email","")
 SLEEP_TIME=cfg.get("sleep_time",5)
 
+TEMP_CI="gitcc_temp_checkin"
+
 def main(no_checkin=False):
     while loop(no_checkin):
        print("Waiting " + SLEEP_TIME + " minutes for next sync")
@@ -47,14 +49,52 @@ def loop(no_checkin):
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
             return True
         if not no_checkin:
-            checkin.main(sendmail=True)
+            # Create checkin_temp branch
+            #git.deleteBranch(TEMP_CI,force=True)
+            #git.checkout(CI_TAG)
+            #git.createBranch(TEMP_CI)
+            #git.checkout(CHECKIN_BRANCH)
+            #git.checkout(TEMP_CI,force=True)
+            cc_exec(['update', '.'])
+            log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', cfg.get('last_checkin_id','HEAD') + '..'])
+            comment = []
+            id = None
+            email = None
+            def _commit():
+                if not id:
+                    return
+                if git.isFastForwardMerge(id):
+                    return
+                statuses = checkin.getStatuses(id)
+                checkin.checkout(statuses, '\n'.join(comment), parentBranches=[CC_TAG,TEMP_CI,'HEAD'])
+                # Merge the checked in commit to the temp checkin branch
+                #git.checkout(TEMP_CI,force=True)
+                #git.merge(id)
+                #git.checkout(CHECKIN_BRANCH)
+                sendSummaryMessage(email,id)
+                tag(CI_TAG, id)
+                cfg.set('last_checkin_id', id)
+                cfg.write()    
+            for line in log.splitlines():
+                if line == "":
+                    _commit()
+                    comment = []
+                    id = None
+                    email = None
+                if not id:
+                    id = line
+                elif not email:
+                    email = line
+                else:
+                    comment.append(line)
+            _commit()
             # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during checkin!",str(e))
         return False
     try:
         acquire.main()
-        git._exec(['merge',CC_TAG])
+        git.merge(CC_TAG)
         git.tag(CI_TAG);
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
@@ -93,3 +133,4 @@ def sendSummaryMessage(to,commit_id):
         
 if __name__ == '__main__':
     main()
+

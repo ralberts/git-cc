@@ -76,8 +76,11 @@ def doCommit(groups):
     
 
 def getSince():
-    commit = git.getLastCommit(CC_TAG)
-    return commit.date + timedelta(seconds=1)
+    date = cfg.get("since",None)
+    if date == None:
+        date = git.getLastCommit(CC_TAG).date
+        return date
+    return Clearcase.parseDate(date) + timedelta(seconds=1)
 
 def mergeHistory(changesets):
     last = None
@@ -114,7 +117,9 @@ def commitGroup(group):
     env['GIT_AUTHOR_EMAIL'] = env['GIT_COMMITTER_EMAIL'] = getUserEmail(user)
     comment = group.comment if group.comment.strip() != "" else "<empty message>"
     git.commit(comment, check=True, env=env)
-
+    cfg.set('since',datetime.strftime(group.date, '%Y-%m-%dT%H:%M:%S')+'-06')
+    cfg.write()
+    
 def addElement(elm):
     toFile = buildPath([GIT_DIR, elm.path])
     mkdirs(toFile)

@@ -40,6 +40,16 @@ class Git(object):
             return True
         return False
     
+    def deleteBranch(self,branchname,force=False):
+        if self.branchExists(branchname):
+            deleteArg = '-d'
+            if force:
+                deleteArg = '-D'
+            self._exec(['branch',deleteArg,branchname])
+
+    def getFileHash(self,file):
+        return git_exec(['hash-object', file])[0:-1]
+    
     def commit(self,comment="<no comment>",check=False,env=None):
         self._exec(['commit','-m',comment],check,env)
     
@@ -50,8 +60,8 @@ class Git(object):
         self._exec(['rm',path],check)
         self._exec(['add',path],check)
         
-    def merge(self,branch):
-        return self._exec(['merge',branch])
+    def merge(self,branch,message='+GITCC MERGE+'):
+        return self._exec(['merge','-m',message,branch])
         
     def checkout(self,branchname,force=False):
         if force:
@@ -73,6 +83,14 @@ class Git(object):
         if(len(self._exec(['ls-files', '--modified']).splitlines()) > 0):
             fail('There are uncommitted files in your git directory')
 
+    def isFastForwardMerge(self,commitId):
+        patch = self._exec(['format-patch','-1',commitId])
+        if len(patch):
+            print(commitId,"is not a fast-forward merge commit")
+            return False
+        print(commitId,"is a fast-forward merge")
+        return True
+    
     def doStash(self, f, stash=True):
         if(stash):
             self._exec(['stash'])

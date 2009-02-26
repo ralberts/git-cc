@@ -29,6 +29,8 @@ def main(force=False,sendmail=False):
     def _commit():
         if not id:
             return
+        if comment.count("+GITCC MERGE+") > 1:
+            return
         statuses = getStatuses(id)
         checkout(statuses, '\n'.join(comment))
         if SEND_MAIL:
@@ -65,9 +67,9 @@ def getStatuses(id):
         list.append(type)
     return list
 
-def checkout(stats, comment):
+def checkout(stats, comment, parentBranches=[CC_TAG,'HEAD']):
     """Poor mans two-phase commit"""
-    transaction = Transaction(comment)
+    transaction = Transaction(comment, parentBranches)
     for stat in stats:
         try:
             stat.stage(transaction)
@@ -79,8 +81,9 @@ def checkout(stats, comment):
     transaction.commit(comment);
 
 class Transaction:
-    def __init__(self, comment):
+    def __init__(self, comment, parentBranches):
         self.checkedout = []
+        self.parentBranches = parentBranches
         cc.mkact(comment)
     def add(self, file):
         self.checkedout.append(file)
@@ -92,13 +95,12 @@ class Transaction:
         if file not in self.checkedout:
             self.co(file)
     def stage(self, file):
-        global IGNORE_CONFLICTS    
         self.co(file)
-        ccid = git_exec(['hash-object', join(CC_DIR, file)])[0:-1]
-        gitid = getBlob(git_exec(['merge-base', CC_TAG, 'HEAD']).strip(), file)
+        global IGNORE_CONFLICTS    
+        ccid = git.getFileHash(join(CC_DIR, file))
+        gitid = getGitHash(file)
         print("object hash of object in clearcase = ",ccid);
         print("object hash of parent object in git = ",gitid);
-
         if ccid != gitid:
             if not IGNORE_CONFLICTS:
                 raise Exception('File has been modified: %s. Try rebasing.' % file)
@@ -110,6 +112,32 @@ class Transaction:
         cc.rmactivity()
     def commit(self, comment):
         for file in self.checkedout:
+            storeGitHash(file,git.getFileHash(join(CC_DIR, file)))
             cc_exec(['ci', '-identical', '-c', comment, file])
+            
         cc.commit()
 
+# Retrieves the has of a file currently in clearcase
+# We cache here for two reason, the first is speed, 
+# but the second is that we need the has for the file as 
+# it was *before* we started checking in over it.
+# This prevents errors when we are checkin in the same file, over and over.
+# Otherwise, the check to see if the clearcase parent had changed would barf....
+# This is somewhat dangerous, but only if someone ch
+HASH_CACHE=dict()
+
+def storeGitHash(file,hash):
+    print("storing hash ",hash,"for file",file)
+    HASH_CACHE[file] = hash
+
+def getGitHash(file):
+    if file in HASH_CACHE:
+        return HASH_CACHE[file]
+    else:
+        cmd = ['merge-base']
+        cmd.extend([CC_TAG,'HEAD'])
+        HASH_CACHE[file] = getBlob(git._exec(cmd).strip(), file)
+    print("returning hash",HASH_CACHE[file],"for file",file)
+    return HASH_CACHE[file]
+        
+    
