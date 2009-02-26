@@ -54,8 +54,7 @@ def loop(no_checkin):
         return False
     try:
         acquire.main()
-        git._exec(['merge',CC_TAG,'--squash'])
-        git.commit('gitcc merge from clearcase');
+        git._exec(['merge',CC_TAG])
         git.tag(CI_TAG);
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
