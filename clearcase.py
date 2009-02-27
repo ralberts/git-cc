@@ -59,6 +59,7 @@ class Clearcase:
                 add(last, comment)
                 comment = split[5]
                 last = split
+        add(last, comment)                
         return checkins
     # TODO: Decide if we really need this...
     def getCurrentVersions():

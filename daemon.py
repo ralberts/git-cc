@@ -49,31 +49,26 @@ def loop(no_checkin):
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
             return True
         if not no_checkin:
-            # Create checkin_temp branch
-            #git.deleteBranch(TEMP_CI,force=True)
-            #git.checkout(CI_TAG)
-            #git.createBranch(TEMP_CI)
-            #git.checkout(CHECKIN_BRANCH)
-            #git.checkout(TEMP_CI,force=True)
             cc_exec(['update', '.'])
-            log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', cfg.get('last_checkin_id','HEAD') + '..'])
+            log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', cfg.get('last_commit_id','HEAD') + '..'])
             comment = []
             id = None
             email = None
             def _commit():
                 if not id:
                     return
-                if git.isFastForwardMerge(id):
-                    return
+                #if git.isFastForwardMerge(id):
+                #    return
                 statuses = checkin.getStatuses(id)
-                checkin.checkout(statuses, '\n'.join(comment), parentBranches=[CC_TAG,TEMP_CI,'HEAD'])
+                checkin.checkout(statuses, '\n'.join(comment))
                 # Merge the checked in commit to the temp checkin branch
                 #git.checkout(TEMP_CI,force=True)
                 #git.merge(id)
                 #git.checkout(CHECKIN_BRANCH)
-                sendSummaryMessage(email,id)
+                lastCommitID = cfg.get('last_commit_id',CI_TAG)
+                sendSummaryMessage(email,id,lastCommitID)
                 tag(CI_TAG, id)
-                cfg.set('last_checkin_id', id)
+                cfg.set('last_commit_id', id)
                 cfg.write()    
             for line in log.splitlines():
                 if line == "":
@@ -95,6 +90,11 @@ def loop(no_checkin):
     try:
         acquire.main()
         git.merge(CC_TAG)
+        # After a merge, we want to record the merge commit as the "last_check_in"
+        # otherwise, it will be picked up as a change, and the checkin routine 
+        # will try to checked it.
+        cfg.set('last_commit_id',git.getLastCommit(CHECKIN_BRANCH).UUID)
+        cfg.write();
         git.tag(CI_TAG);
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
@@ -119,8 +119,8 @@ def sendEmail(to,subject,content):
     server.sendmail(sender, to, message)
     server.quit()
 
-def sendSummaryMessage(to,commit_id):
-    summary =  git_exec(['diff','--name-status', '-z', '%s^..%s' % (commit_id, commit_id)])
+def sendSummaryMessage(to,commit_id,lastCommitId):
+    summary =  git_exec(['diff','--name-status','%s..%s' % (lastCommitId, commit_id)])
     subject = "Your commit " + commit_id + " has been checked into clearcase";
     message = subject + "\n\n"
     message += summary

@@ -29,8 +29,6 @@ def main(force=False,sendmail=False):
     def _commit():
         if not id:
             return
-        if comment.count("+GITCC MERGE+") > 1:
-            return
         statuses = getStatuses(id)
         checkout(statuses, '\n'.join(comment))
         if SEND_MAIL:
@@ -51,7 +49,7 @@ def main(force=False,sendmail=False):
     _commit()
 
 def getStatuses(id):
-    status = git_exec(['diff','--name-status', '-M', '-z', '%s^..%s' % (id, id)])
+    status = git_exec(['diff','--name-status', '-M', '-z', '%s..%s' % (cfg.get('last_commit_id',CI_TAG), id)])
     types = {'M':Modify, 'R':Rename, 'D':Delete, 'A':Add, 'C':Add}
     list = []
     split = status.split('\x00')
@@ -67,9 +65,9 @@ def getStatuses(id):
         list.append(type)
     return list
 
-def checkout(stats, comment, parentBranches=[CC_TAG,'HEAD']):
+def checkout(stats, comment):
     """Poor mans two-phase commit"""
-    transaction = Transaction(comment, parentBranches)
+    transaction = Transaction(comment)
     for stat in stats:
         try:
             stat.stage(transaction)
@@ -81,9 +79,8 @@ def checkout(stats, comment, parentBranches=[CC_TAG,'HEAD']):
     transaction.commit(comment);
 
 class Transaction:
-    def __init__(self, comment, parentBranches):
+    def __init__(self, comment):
         self.checkedout = []
-        self.parentBranches = parentBranches
         cc.mkact(comment)
     def add(self, file):
         self.checkedout.append(file)

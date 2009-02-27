@@ -60,7 +60,7 @@ class Git(object):
         self._exec(['rm',path],check)
         self._exec(['add',path],check)
         
-    def merge(self,branch,message='+GITCC MERGE+'):
+    def merge(self,branch,message='cc->git auto merge'):
         return self._exec(['merge','-m',message,branch])
         
     def checkout(self,branchname,force=False):
