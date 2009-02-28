@@ -121,8 +121,9 @@ def sendEmail(to,subject,content):
 
 def sendSummaryMessage(to,commit_id,lastCommitId):
     summary =  git_exec(['diff','--name-status','%s..%s' % (lastCommitId, commit_id)])
-    subject = "Your commit " + commit_id + " has been checked into clearcase\n\nRedmine Link: " + REDMINE + commit_id;
+    subject = "Your commit " + commit_id + " has been checked into clearcase"
     message = subject + "\n\n"
+    message += "\n\nRedmine Link: " + REDMINE + commit_id + "\n\n"
     message += summary
     try:
         sendEmail(to, subject, message)
