@@ -36,7 +36,9 @@ def main(stash=False, dry_run=False, lshistory=False, load=None, since=None):
     if not dry_run:
         print('Performing rebase...')
         if len(branch):
-            git._exec(['rebase', '--onto', CC_TAG, branch])
+            git._exec(['rebase', '--onto', CC_TAG, CI_TAG, branch])
+            git._exec(['tag','-f', CI_TAG, CC_TAG])
         else:
             git._exec(['checkout', '-b', CC_TAG])
+        
 

@@ -10,19 +10,25 @@ from os.path import isdir
 
 IGNORE_CONFLICTS=False
 SEND_MAIL=False
+SINGLE_COMMIT=None
 ARGS = {
     'force': 'ignore conflicts and check-in anyway',
-    'sendmail':'send mail to commiter after the checkin is complete'
+    'sendmail':'send mail to commiter after the checkin is complete',
+    'commit' : 'the id of a single commit to checkin to clearcase'
 }
 
-def main(force=False,sendmail=False):
-    global IGNORE_CONFLICTS, SEND_MAIL
+def main(force=False,sendmail=False,commit=None):
+    global IGNORE_CONFLICTS, SEND_MAIL, SINGLE_COMMIT
+    SINGLE_COMMIT = commit
     if force:
         IGNORE_CONFLICTS=True
     if sendmail:
         SEND_MAIL=True
     cc_exec(['update', '.'])
-    log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', CI_TAG + '..'])
+    if SINGLE_COMMIT != None:
+        log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', commit + '^..' + commit])
+    else:
+        log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', CI_TAG + '..'])
     comment = []
     id = None
     email = None
@@ -33,7 +39,8 @@ def main(force=False,sendmail=False):
         checkout(statuses, '\n'.join(comment))
         if SEND_MAIL:
             sendSummaryMessage(email,id)
-        tag(CI_TAG, id)
+        if SINGLE_COMMIT == None:
+            tag(CI_TAG, id)
     for line in log.splitlines():
         if line == "":
             _commit()
@@ -49,7 +56,11 @@ def main(force=False,sendmail=False):
     _commit()
 
 def getStatuses(id):
-    status = git_exec(['diff','--name-status', '-M', '-z', '%s..%s' % (cfg.get('last_commit_id',CI_TAG), id)])
+    if SINGLE_COMMIT != None:
+        status = git_exec(['diff','--name-status', '-M', '-z', '%s^..%s' % (SINGLE_COMMIT, SINGLE_COMMIT)])
+    else:
+        status = git_exec(['diff','--name-status', '-M', '-z', '%s..%s' % (cfg.get('last_commit_id',CI_TAG), id)])
+
     types = {'M':Modify, 'R':Rename, 'D':Delete, 'A':Add, 'C':Add}
     list = []
     split = status.split('\x00')
