@@ -8,4 +8,5 @@ def main(message):
     sync.main('*')
     git_exec(['add', '.'])
     git_exec(['commit', '-m', message])
+    git.tag(CI_TAG)
     reset.main('HEAD')
