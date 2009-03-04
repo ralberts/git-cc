@@ -47,7 +47,7 @@ def loop(no_checkin):
         pull = git._exec(["pull"])
         if pull.find('CONFLICT') >= 0:
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
-            return True
+            return False
         if not no_checkin:
             cc_exec(['update', '.'])
             log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', cfg.get('last_commit_id','HEAD') + '..'])
@@ -90,9 +90,9 @@ def loop(no_checkin):
     try:
         acquire.main()
         out = git.merge(CC_TAG)
-        if pull.find('CONFLICT') >= 0:
+        if out.find('CONFLICT') >= 0:
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
-            return True
+            return False
         # After a merge, we want to record the merge commit as the "last_check_in"
         # otherwise, it will be picked up as a change, and the checkin routine 
         # will try to checked it.
