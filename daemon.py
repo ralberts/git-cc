@@ -22,7 +22,6 @@ ARGS = {
 CHECKIN_BRANCH=cfg.get("checkin_branch","")
 ADMIN_EMAIL=cfg.get("admin_email","")
 SLEEP_TIME=cfg.get("sleep_time",5)
-REDMINE="http://bericson:3000/repositories/revision/clientarchitecture/"
 TEMP_CI="gitcc_temp_checkin"
 
 def main(no_checkin=False):
@@ -129,7 +128,6 @@ def sendSummaryMessage(to,commit_id,lastCommitId):
     summary =  git_exec(['diff','--name-status','%s..%s' % (lastCommitId, commit_id)])
     subject = "Your commit " + commit_id + " has been checked into clearcase"
     message = subject + "\n\n"
-    message += "\n\nRedmine Link: " + REDMINE + commit_id + "\n\n"
     message += summary
     try:
         sendEmail(to, subject, message)
