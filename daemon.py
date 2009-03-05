@@ -67,7 +67,7 @@ def loop(no_checkin):
                 #git.checkout(CHECKIN_BRANCH)
                 lastCommitID = cfg.get('last_commit_id',CI_TAG)
                 sendSummaryMessage(email,id,lastCommitID)
-                tag(CI_TAG, id)
+                # tag(CI_TAG, id)
                 cfg.set('last_commit_id', id)
                 cfg.write()    
             for line in log.splitlines():
@@ -90,7 +90,7 @@ def loop(no_checkin):
     try:
         acquire.main()
         out = git.merge(CC_TAG)
-        if pull.find('CONFLICT') >= 0:
+        if out.find('CONFLICT') >= 0:
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
             return True
         # After a merge, we want to record the merge commit as the "last_check_in"
@@ -98,7 +98,7 @@ def loop(no_checkin):
         # will try to checked it.
         cfg.set('last_commit_id',git.getLastCommit(CHECKIN_BRANCH).UUID)
         cfg.write();
-        git.tag(CI_TAG);
+        #git.tag(CI_TAG);
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
         return False
