@@ -67,7 +67,7 @@ def loop(no_checkin):
                 #git.checkout(CHECKIN_BRANCH)
                 lastCommitID = cfg.get('last_commit_id',CI_TAG)
                 sendSummaryMessage(email,id,lastCommitID)
-                tag(CI_TAG, id)
+                # tag(CI_TAG, id)
                 cfg.set('last_commit_id', id)
                 cfg.write()    
             for line in log.splitlines():
@@ -98,13 +98,13 @@ def loop(no_checkin):
         # will try to checked it.
         cfg.set('last_commit_id',git.getLastCommit(CHECKIN_BRANCH).UUID)
         cfg.write();
-        git.tag(CI_TAG);
+        #git.tag(CI_TAG);
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
         return False
     try: 
         git._exec(['push','origin',CHECKIN_BRANCH])
-        git._exec(['push','origin',CC_TAG])
+        # git._exec(['push','origin',CC_TAG])
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin push!",str(e))
         return False
