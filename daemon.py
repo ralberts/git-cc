@@ -22,7 +22,7 @@ ARGS = {
 CHECKIN_BRANCH=cfg.get("checkin_branch","")
 ADMIN_EMAIL=cfg.get("admin_email","")
 SLEEP_TIME=cfg.get("sleep_time",5)
-
+REDMINE="http://bericson:3000/repositories/revision/clientarchitecture/"
 TEMP_CI="gitcc_temp_checkin"
 
 def main(no_checkin=False):
@@ -47,7 +47,7 @@ def loop(no_checkin):
         pull = git._exec(["pull"])
         if pull.find('CONFLICT') >= 0:
             sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
-            return True
+            return False
         if not no_checkin:
             cc_exec(['update', '.'])
             log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', cfg.get('last_commit_id','HEAD') + '..'])
@@ -67,7 +67,7 @@ def loop(no_checkin):
                 #git.checkout(CHECKIN_BRANCH)
                 lastCommitID = cfg.get('last_commit_id',CI_TAG)
                 sendSummaryMessage(email,id,lastCommitID)
-                # tag(CI_TAG, id)
+                #tag(CI_TAG, id)
                 cfg.set('last_commit_id', id)
                 cfg.write()    
             for line in log.splitlines():
@@ -89,22 +89,25 @@ def loop(no_checkin):
         return False
     try:
         acquire.main()
-        out = git.merge(CC_TAG)
+        git.checkout(CC_TAG)
+        out = git._exec(['rebase',CHECKIN_BRANCH])
         if out.find('CONFLICT') >= 0:
-            sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
-            return True
+            sendEmail(ADMIN_EMAIL,"Merge Needed!",out)
+            return False
         # After a merge, we want to record the merge commit as the "last_check_in"
         # otherwise, it will be picked up as a change, and the checkin routine 
         # will try to checked it.
+        git.checkout(CHECKIN_BRANCH)
         cfg.set('last_commit_id',git.getLastCommit(CHECKIN_BRANCH).UUID)
         cfg.write();
+        
         #git.tag(CI_TAG);
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
         return False
     try: 
         git._exec(['push','origin',CHECKIN_BRANCH])
-        # git._exec(['push','origin',CC_TAG])
+        git._exec(['push','origin',CC_TAG])
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin push!",str(e))
         return False
@@ -124,8 +127,9 @@ def sendEmail(to,subject,content):
 
 def sendSummaryMessage(to,commit_id,lastCommitId):
     summary =  git_exec(['diff','--name-status','%s..%s' % (lastCommitId, commit_id)])
-    subject = "Your commit " + commit_id + " has been checked into clearcase";
+    subject = "Your commit " + commit_id + " has been checked into clearcase"
     message = subject + "\n\n"
+    message += "\n\nRedmine Link: " + REDMINE + commit_id + "\n\n"
     message += summary
     try:
         sendEmail(to, subject, message)
