@@ -11,15 +11,20 @@ from os.path import isdir
 IGNORE_CONFLICTS=False
 SEND_MAIL=False
 SINGLE_COMMIT=None
+USE_PARENT=None
 ARGS = {
     'force': 'ignore conflicts and check-in anyway',
     'sendmail':'send mail to commiter after the checkin is complete',
-    'commit' : 'the id of a single commit to checkin to clearcase'
+    'commit' : 'the id of a single commit to checkin to clearcase',
+    'parent' : 'the commit id of the parent to use as the parent commit (use in combination with commit)'
 }
 
-def main(force=False,sendmail=False,commit=None):
-    global IGNORE_CONFLICTS, SEND_MAIL, SINGLE_COMMIT
+def main(force=False,sendmail=False,commit=None, parent=None):
+    global IGNORE_CONFLICTS, SEND_MAIL, SINGLE_COMMIT,USE_PARENT
+    if parent != None and commit == None:
+        fail("parent option cannot be used without commit option")
     SINGLE_COMMIT = commit
+    USE_PARENT=parent
     if force:
         IGNORE_CONFLICTS=True
     if sendmail:
@@ -57,7 +62,11 @@ def main(force=False,sendmail=False,commit=None):
 
 def getStatuses(id):
     if SINGLE_COMMIT != None:
-        status = git_exec(['diff','--name-status', '-M', '-z', '%s^..%s' % (SINGLE_COMMIT, SINGLE_COMMIT)])
+        if USE_PARENT != None:
+            parent_id = USE_PARENT
+        else:
+            parent_id = SINGLE_COMMIT + '^'
+        status = git_exec(['diff','--name-status', '-M', '-z', '%s..%s' % (parent_id, SINGLE_COMMIT)])
     else:
         status = git_exec(['diff','--name-status', '-M', '-z', '%s..%s' % (cfg.get('last_commit_id',CI_TAG), id)])
 
