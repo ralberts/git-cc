@@ -104,7 +104,7 @@ def loop(no_checkin):
         return False
     try: 
         git._exec(['push','origin',CHECKIN_BRANCH])
-        git._exec(['push','origin',CC_TAG])
+        # git._exec(['push','origin',CC_TAG])
     except Exception as e:
         sendEmail(ADMIN_EMAIL,"Error during post checkin push!",str(e))
         return False
