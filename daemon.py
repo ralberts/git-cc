@@ -97,6 +97,11 @@ def loop(no_checkin):
         # otherwise, it will be picked up as a change, and the checkin routine 
         # will try to checked it.
         git.checkout(CHECKIN_BRANCH)
+ 
+        out = git.merge(CC_TAG)
+        if out.find('CONFLICT') >= 0:
+            sendEmail(ADMIN_EMAIL,"Merge Needed!",out)
+            return False
         cfg.set('last_commit_id',git.getLastCommit(CHECKIN_BRANCH).UUID)
         cfg.write();
         
