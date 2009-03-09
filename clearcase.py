@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-import time
+import time, math
 
 from common import *
 
@@ -126,12 +126,30 @@ class Clearcase:
     
     def getFileForElement(self,elm,toFile):
         self._exec(['get','-to', toFile, elm.getCCName()])
-        
+    
+    # TODO: Fix this so it doesn't use hard          
     def formatForLshistory(self,date):
+        def addUTC(datestr):
+            hours = str(math.floor(abs(time.timezone/60/60)))
+            mins = str(int(abs(time.timezone/60/60%1 * 60)))  
+            
+            if int(hours) < 10:
+                hours = '0' + hours
+            if int(mins) < 10:
+                mins = '0' + mins
+            if time.timezone < 0:
+                hours = '+' + hours
+            else:
+                hours = '-' + hours
+
+            return datestr + 'UTC' + hours + ':' + mins
+        
         if isinstance(date,str):
             # TODO: Add check here that the str is in the correct format before returning
             return date
-        return datetime.strftime(date, '%d-%b-%Y.%H:%M:%S')
+        
+        
+        return addUTC(datetime.strftime(date, '%d-%b-%Y.%H:%M:%S'))
     
     def rebase(self):
         pass
