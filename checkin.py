@@ -114,15 +114,16 @@ class Transaction:
     def stage(self, file):
         self.co(file)
         global IGNORE_CONFLICTS    
-        ccid = git.getFileHash(join(CC_DIR, file))
-        gitid = getGitHash(file)
-        print("object hash of object in clearcase = ",ccid);
-        print("object hash of parent object in git = ",gitid);
-        if ccid != gitid:
-            if not IGNORE_CONFLICTS:
-                raise Exception('File has been modified: %s. Try rebasing.' % file)
-            else:
-                print ('WARNING: Detected possible confilct with',file,'...ignoring...')
+        if not IGNORE_CONFLICTS:
+            ccid = git.getFileHash(join(CC_DIR, file))
+            gitid = getGitHash(file)
+            print("object hash of object in clearcase = ",ccid);
+            print("object hash of parent object in git = ",gitid);
+            if ccid != gitid:
+                if not IGNORE_CONFLICTS:
+                    raise Exception('File has been modified: %s. Try rebasing.' % file)
+                else:
+                    print ('WARNING: Detected possible confilct with',file,'...ignoring...')
     def rollback(self):
         for file in self.checkedout:
             cc_exec(['unco', '-rm', file])

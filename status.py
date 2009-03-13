@@ -8,7 +8,10 @@ class Status:
         self.file = file
     def cat(self):
         blob = git_exec(['cat-file', 'blob', getBlob(self.id, self.file)], decode=False)
-        write(join(CC_DIR, self.file), blob)
+        try:
+            write(join(CC_DIR, self.file), blob)
+        except Exception as e:
+            print("Error when trying to write file",self.file,"   ",str(e))
     def stageDirs(self, t):
         dir = dirname(self.file)
         dirs = []
@@ -26,7 +29,11 @@ class Status:
 
 class Modify(Status):
     def stage(self, t):
-        t.stage(self.file)
+        try:
+            t.stage(self.file)
+        except Exception as e:
+            print("Error when trying to stage file",self.file,"   ",str(e))
+           
     def commit(self, t):
         self.cat()
 
