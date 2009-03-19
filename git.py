@@ -99,7 +99,17 @@ class Git(object):
             self._exec(['stash', 'pop'])
             
     def tag(self, tag, id="HEAD"):
-        git_exec(['tag', '-f', tag, id])            
+        git_exec(['tag', '-f', tag, id])  
+    
+    def getParentCommits(self, commit):
+        output = self._exec(['log','--pretty=format:%P', '-n', '1' ,commit])
+        parents = output.split(' ')
+        return parents
+    
+    def getMergeBase(self, commit1, commit2):
+        output = self._exec(['merge-base',commit1, commit2])
+        return output
+        
 
 git = Git()        
         

@@ -140,7 +140,46 @@ def sendSummaryMessage(to,commit_id,lastCommitId):
         message = "Error when sending commit summary email to " + to + "\n\n" + str(e)
         message += "\n\n The user probably needs to set the correct email in .git/config"
         sendEmail(ADMIN_EMAIL,"Error when sending summary email",message)
+
+def calculateCommitRoute():
+    commits = []
+    last_commit = cfg.get('last_commit_id')
+    def buildRoute(commit):
+        parents = git.getParentCommits(commit)
+        if commit == last_commit:
+            return None
+        for parent in parents:
+            if len(commits) > 0 and commits[-1] == last_commit:
+                return None
+            if parent == last_commit:
+                commits.append(parent)
+                return None
+            else:
+                if git.getMergeBase(last_commit,parent).strip() != last_commit:
+                    return None
+                else:
+                    commits.append(parent)
+                    buildRoute(parent)  
+    buildRoute('HEAD')
+    return commits
+            
         
 if __name__ == '__main__':
-    main()
-
+    commitRoute = calculateCommitRoute()
+    git._exec(['branch','sync_temp',cfg.get('last_commit_id')])
+    commitRoute.reverse()
+    commitRoute.append(git.getLastCommit('master').UUID)
+    git.checkout('sync_temp')
+    i = 0
+    for commit in commitRoute:
+        print("Cherry picking",commit)
+        parents = git.getParentCommits(commit)
+        if len(parents) > 1 and i > 0:
+            if parents[0] == commitRoute[i-1]:
+                parent_number = 1
+            else:
+                parent_number = 2
+            git._exec(['cherry-pick','-x','-m',str(parent_number),commit])
+        else:
+            git._exec(['cherry-pick',commit])
+        i += 1
