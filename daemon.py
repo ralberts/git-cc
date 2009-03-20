@@ -24,99 +24,120 @@ ADMIN_EMAIL=cfg.get("admin_email","")
 SLEEP_TIME=cfg.get("sleep_time",5)
 TEMP_CI="gitcc_temp_checkin"
 
+SYNC_BRANCH="gitcc_sync_branch"
+
+
+
+
 def main(no_checkin=False):
     while loop(no_checkin):
        print("Waiting " + SLEEP_TIME + " minutes for next sync")
        time.sleep(60 * float(SLEEP_TIME))
 
 def loop(no_checkin):
-    # Just in case we were are in a broken merge
-    git._exec(['checkout', '-f', CHECKIN_BRANCH])
-    git._exec(['pull'])
-#    try:
-#        acquire.main()
-#        git._exec(['merge',CC_TAG,'--squash'])
-#        git.commit('gitcc merge from clearcase');
-#    except Exception as e:
-#        sendEmail(ADMIN_EMAIL,"Error encountered when retrieving clearcase history",str(e))
-#        return False
+    last_commit = cfg.get("last_commit_id",'HEAD')
+
     try:
-        ## Run pull, and pull an additional changes
+        # Pull most recent changes
         git.checkout(CHECKIN_BRANCH);
         pull = git._exec(["pull"])
-        if pull.find('CONFLICT') >= 0:
-            sendEmail(ADMIN_EMAIL,"Merge Needed!",pull)
-            return False
-        if not no_checkin:
+
+        # Get list of commits
+        commits = git.getCommitList(last_commit, git.getLastCommit(CHECKIN_BRANCH).id)
+        if len(commits) > 1 and not no_checkin:
+            
+            # build temporary sync branch
+            commits.reverse()
+            buildSyncBranch(commits, last_commit)
+            
+            # check that the sync branch is accurate
+            diff = checkDiff(SYNC_BRANCH,CHECKIN_BRANCH)
+            if diff != None:
+                sendAdminEmail("Sync branch does not match " + CHECK_BRANCH + "! Aborting...",diff)
+
+            # update clearcase view
             cc_exec(['update', '.'])
-            log = git_exec(['log', '--first-parent', '--reverse', '--pretty=format:%H%n%ce%n%s%n%b', cfg.get('last_commit_id','HEAD') + '..'])
-            comment = []
-            id = None
-            email = None
-            def _commit():
-                if not id:
-                    return
-                #if git.isFastForwardMerge(id):
-                #    return
-                statuses = checkin.getStatuses(id)
-                checkin.checkout(statuses, '\n'.join(comment))
-                # Merge the checked in commit to the temp checkin branch
-                #git.checkout(TEMP_CI,force=True)
-                #git.merge(id)
-                #git.checkout(CHECKIN_BRANCH)
-                lastCommitID = cfg.get('last_commit_id',CI_TAG)
-                sendSummaryMessage(email,id,lastCommitID)
-                #tag(CI_TAG, id)
-                cfg.set('last_commit_id', id)
-                cfg.write()    
-            for line in log.splitlines():
-                if line == "":
-                    _commit()
-                    comment = []
-                    id = None
-                    email = None
-                if not id:
-                    id = line
-                elif not email:
-                    email = line
-                else:
-                    comment.append(line)
-            _commit()
-            # If everything checked in, then we want to tag the HEAD of the checkin-branch with the clearcase_CI tag.
+
+            # get commit history from sync branch
+            sync_commits = git.getCommitHistory(last_commit,'HEAD')
+            
+            # set initial last_sync_commit_id == last_commit
+            setLastSyncCommit(last_commit)
+
+            # commit all commits on sync-branch
+            for commit in sync_commits:
+                statuses = checkin.getStatuses(commit.id)
+                checkin.checkout(statuses, commit.comment)
+                sendSummaryMessage(commit.email, commit.id, getLastSyncCommit())
+                setLastSyncCommit(commit.id)
+
+            
     except Exception as e:
-        sendEmail(ADMIN_EMAIL,"Error during checkin!",str(e))
+        sendAdminEmail("Error during checkin!",str(e))
         return False
+
+
     try:
-        acquire.main()
-        git.checkout(CC_TAG)
-        out = git._exec(['rebase',CHECKIN_BRANCH])
-        if out.find('CONFLICT') >= 0:
-            sendEmail(ADMIN_EMAIL,"Merge Needed!",out)
-            return False
-        # After a merge, we want to record the merge commit as the "last_check_in"
-        # otherwise, it will be picked up as a change, and the checkin routine 
-        # will try to checked it.
-        git.checkout(CHECKIN_BRANCH)
- 
-        out = git.merge(CC_TAG)
-        if out.find('CONFLICT') >= 0:
-            sendEmail(ADMIN_EMAIL,"Merge Needed!",out)
-            return False
-        cfg.set('last_commit_id',git.getLastCommit(CHECKIN_BRANCH).UUID)
-        cfg.write();
+        # create 'clearcase' branch
+        git.createBranch(CC_TAG,last_commit)
         
-        #git.tag(CI_TAG);
+        # acquire clearcase history
+        acquire.main()
+        
+        # rebase aquired history onto sync_branch
+        git.checkout(CC_TAG)
+        if git.branchExists(SYNC_BRANCH):
+            out = git.rebase(SYNC_BRANCH)
+        
+        # prepare list of commits from 'clearcase' branch to cherry-pick
+        fromCommit = SYNC_BRANCH
+        if not git.branchExists(SYNC_BRANCH):
+            fromCommit = last_commit
+        commits = git.getCommitHistory(fromCommit,CC_TAG)
+        
+        # checkout checkin branch
+        git.checkout(CHECKIN_BRANCH)
+
+        # cherry-pick commit from the 'clearcase' branch
+        for commit in commits:
+            git._exec(['cherry-pick', '-x', commit.id])
+
+        # check that the clearcase branch matches the CHECKIN_BRANCH, at this point, they
+        # should be the same.
+        diff = checkDiff(CC_TAG,CHECKIN_BRANCH)
+        if diff != None:
+            sendAdminEmail("clearcase branch does not match " + CHECKIN_BRANCH + "! Aborting...", diff)
+
+
+        # clean up -- delete clearcase and sync braches
+        git.deleteBranch(CC_TAG, force=True)
+        git.deleteBranch(SYNC_BRANCH, force=True)
+
+        # all is well! set last_commit_id to the last commit on the checkin branch
+        cfg.set('last_commit_id',git.getLastCommit(CHECKIN_BRANCH).id)
+        cfg.write();
+
+        # pull in any changes, and check for conflicts
+        out = git.pull()
+        if out.upper().find('CONFLICT') >= 0:
+            sendAdminEmail("Merge Needed!",out)
+            return False
+
     except Exception as e:
-        sendEmail(ADMIN_EMAIL,"Error during post checkin pull merge!",str(e))
+        sendAdminemail("Error during clearcase history acquisition!",str(e))
         return False
+
     try: 
+        # Push changes out to the master repo
         git._exec(['push','origin',CHECKIN_BRANCH])
-        #git._exec(['push','origin',CC_TAG])
     except Exception as e:
-        sendEmail(ADMIN_EMAIL,"Error during post checkin push!",str(e))
+        sendAdminEmail("Error during push!",str(e))
         return False
     return True
         
+
+def sendAdminEmail(subject,content):
+    sendEmail(ADMIN_EMAIL, subject, content)
 
 def sendEmail(to,subject,content):
     sender = 'gitcc@no-reply.com'
@@ -141,45 +162,45 @@ def sendSummaryMessage(to,commit_id,lastCommitId):
         message += "\n\n The user probably needs to set the correct email in .git/config"
         sendEmail(ADMIN_EMAIL,"Error when sending summary email",message)
 
-def calculateCommitRoute():
-    commits = []
-    last_commit = cfg.get('last_commit_id')
-    def buildRoute(commit):
-        parents = git.getParentCommits(commit)
-        if commit == last_commit:
-            return None
-        for parent in parents:
-            if len(commits) > 0 and commits[-1] == last_commit:
-                return None
-            if parent == last_commit:
-                commits.append(parent)
-                return None
-            else:
-                if git.getMergeBase(last_commit,parent).strip() != last_commit:
-                    return None
-                else:
-                    commits.append(parent)
-                    buildRoute(parent)  
-    buildRoute('HEAD')
-    return commits
-            
-        
-if __name__ == '__main__':
-    commitRoute = calculateCommitRoute()
-    git._exec(['branch','sync_temp',cfg.get('last_commit_id')])
-    commitRoute.reverse()
-    commitRoute.append(git.getLastCommit('master').UUID)
-    git.checkout('sync_temp')
+#------------------------------------------------------------------------------ 
+#    Builds a temporary branch, based off of last_commit, by cherry picking 
+#    the list of commits returned from git.getCommitList()
+#------------------------------------------------------------------------------ 
+def buildSyncBranch(commits,last_commit):
+    git.createBranch(SYNC_BRANCH,last_commit)
+    git.checkout(SYNC_BRANCH)
     i = 0
-    for commit in commitRoute:
+    for commit in commits:
         print("Cherry picking",commit)
         parents = git.getParentCommits(commit)
+        out = ""
         if len(parents) > 1 and i > 0:
-            if parents[0] == commitRoute[i-1]:
+            if parents[0] == commits[i-1]:
                 parent_number = 1
             else:
                 parent_number = 2
-            git._exec(['cherry-pick','-x','-m',str(parent_number),commit])
+            out = git._exec(['cherry-pick','-m',str(parent_number),commit])
         else:
-            git._exec(['cherry-pick',commit])
-        i += 1
+            out = git._exec(['cherry-pick', commit])
+        # TODO: Fix this, it doesn't really work because we don't read in stderror
+        if out.upper().find('FATAL') >= 0:
+            sendEmail(ADMIN_EMAIL,"Error during cherry-pick operation",out)
+            exit()
+        i += 1    
+
+def setLastSyncCommit(commit_id):           
+    cfg.set('last_sync_commit_id',commit_id)
+    cfg.write
+
+def getLastSyncCommit(default=None):
+    return cfg.get('last_sync_commit_id',default)
+
+def checkDiff(branch1,branch2):
+    output = git._exec(['diff','--name-status', branch1, branch2])
+    if len(output.strip()) > 0:
+        return output
+    else:
+        return None
+            
+if __name__ == '__main__':
+    main()

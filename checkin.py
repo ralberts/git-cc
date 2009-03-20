@@ -151,9 +151,10 @@ def getGitHash(file):
     if file in HASH_CACHE:
         return HASH_CACHE[file]
     else:
-        cmd = ['merge-base']
-        cmd.extend([CC_TAG,'HEAD'])
-        HASH_CACHE[file] = getBlob(git._exec(cmd).strip(), file)
+#        cmd = ['merge-base']
+#        cmd.extend([CC_TAG,'HEAD'])
+        #HASH_CACHE[file] = getBlob(git._exec(cmd).strip(), file)
+        HASH_CACHE[file] = getBlob(cfg.get('last_commit_id'), file)
     print("returning hash",HASH_CACHE[file],"for file",file)
     return HASH_CACHE[file]
         

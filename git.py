@@ -32,8 +32,11 @@ class Git(object):
             return branch[2:]
         return list(map(trm,self._exec(['branch']).split('\n')))
     
-    def createBranch(self,branchname):
-        self._exec(['branch', branchname])
+    def createBranch(self,branchname,rootCommit=None):
+        command = ['branch',branchname]
+        if rootCommit != None:
+            command.append(rootCommit)
+        self._exec(command)
         
     def branchExists(self,branchname):
         if branchname in self.getBranchList():
@@ -59,9 +62,16 @@ class Git(object):
     def remove(self,path,check=False):
         self._exec(['rm',path],check)
         self._exec(['add',path],check)
-        
+
+    def rebase(self,branch):
+        out = git._exec(['rebase',branch])
+        return out
+      
     def merge(self,branch,message='cc->git auto merge'):
         return self._exec(['merge','-m',message,branch])
+
+    def pull(self,):
+        return self._exec(['pull'])
         
     def checkout(self,branchname,force=False):
         if force:
@@ -72,11 +82,24 @@ class Git(object):
     def checkoutPath(self,ref,path,check=False):
         self._exec(['checkout',ref,path,check])
         
-    def getLastCommit(self,branchname):
-        line = self._exec(['log', '-n', '1', '--pretty=format:%H?*?%ce?*?%cn?*?%ai?*?%s?*?%b', '%s' % branchname])
+    def getLastCommit(self, branchname):
+        return self.getCommit(branchname)
+
+    def getCommit(self,commit_id):
+        line = self._exec(['log', '-n', '1', '--pretty=format:%H?*?%ce?*?%cn?*?%ai?*?%s?*?%b', '%s' % commit_id])
         split = line.split("?*?")
         return Commit(split[0],split[3],split[2],split[1],split[4] + '\n' + split[5])
 
+    def getCommitHistory(self, start_id, end_id):
+        commits = []
+        output = self._exec(['log', '-M', '-z', '--reverse', '--pretty=format:%H?*?%ce?*?%cn?*?%ai?*?%s?*?%b', start_id + '..' + end_id])
+        if len(output.strip()) > 0:
+            lines = output.split('\x00')
+            for line in lines:
+                split = line.split("?*?")
+                commits.append(Commit(split[0],split[3],split[2],split[1],split[4] + '\n' + split[5]))
+        return commits
+        
     def checkPristine(self):
         if not exists(".git"):
             fail('No .git directory found')
@@ -109,13 +132,59 @@ class Git(object):
     def getMergeBase(self, commit1, commit2):
         output = self._exec(['merge-base',commit1, commit2])
         return output
-        
+
+    #===============================================================================
+    #  getCommitList - 
+    #    Operating on the CURRENT BRANCH, this method generates a list of 
+    #    commits that is suited to cherry-pick to another branch.  The list 
+    #    of commits provided is the minimal set required to duplicate the
+    #    commit history of from startCommit to endCommit, regardless of the number
+    #    of merges/branches that exist between the two points.
+    #    
+    #    NOTE: The list returned does include endCommit, but NOT startCommit
+    #===============================================================================
+    def getCommitList(self, startCommit, endCommit):
+        commits = []
+        def walkHistory(commit):
+            parents = git.getParentCommits(commit)
+            if commit == startCommit:
+                return None
+            for parent in parents:
+                if len(commits) > 0 and commits[-1] == startCommit:
+                    return None
+                if parent == startCommit:
+                    commits.append(parent)
+                    return None
+                else:
+                    if git.getMergeBase(startCommit,parent).strip() != startCommit:
+                        return None
+                    else:
+                        commits.append(parent)
+                        walkHistory(parent)
+        commits.append(endCommit)  
+        walkHistory(endCommit)
+        return commits
+#        commits = []
+#        def walkHistory(commit):
+#            commits.append(commit)
+#            if commit == startCommit:
+#                return None
+#            parents = git.getParentCommits(commit)
+#            for parent in parents:
+#                if commits[-1] == startCommit:
+#                    return None
+#                elif git.getMergeBase(startCommit,parent).strip() != startCommit:
+#                    return None
+#                else:
+#                    walkHistory(parent)  
+#        walkHistory(endCommit)
+#        return commits        
 
 git = Git()        
         
 class Commit(object):
-    def __init__(self,UUID,date,author,email,comment):
-        self.UUID = UUID
+    def __init__(self,id,date,author,email,comment):
+        self.id = id
         self.date = datetime.strptime(date[:19], '%Y-%m-%d %H:%M:%S')
         self.author = author
         self.email = email
