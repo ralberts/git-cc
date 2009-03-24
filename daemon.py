@@ -47,8 +47,8 @@ def loop(no_checkin):
         if len(commits) > 1 and not no_checkin:
             
             # build temporary sync branch
+            commits.pop() # pop off the first commit (we don't need it, and it could be a merge commit, which causes problems!)
             commits.reverse()
-            commits.pop() # pop off the first commit (we don't need it, and it could be a merge commit!)
             buildSyncBranch(commits, last_commit)
             
             # check that the sync branch is accurate
