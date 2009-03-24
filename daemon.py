@@ -54,6 +54,7 @@ def loop(no_checkin):
             diff = checkDiff(SYNC_BRANCH,CHECKIN_BRANCH)
             if diff != None:
                 sendAdminEmail("Sync branch does not match " + CHECK_BRANCH + "! Aborting...",diff)
+                return false
 
             # update clearcase view
             cc_exec(['update', '.'])
@@ -107,6 +108,7 @@ def loop(no_checkin):
         diff = checkDiff(CC_TAG,CHECKIN_BRANCH)
         if diff != None:
             sendAdminEmail("clearcase branch does not match " + CHECKIN_BRANCH + "! Aborting...", diff)
+            return false
 
 
         # clean up -- delete clearcase and sync braches
