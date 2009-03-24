@@ -5,7 +5,9 @@ def popen(exe, cmd, cwd, env=None, decode=True):
     cmd.insert(0, exe)
     if DEBUG:
         debug('> ' + ' '.join(cmd))
-    input = Popen(cmd, cwd=cwd, stdout=PIPE, env=env).stdout.read()
+    process = Popen(cmd, cwd=cwd, stdout=PIPE, env=env)
+    input = process.stdout.read()
+    
     return input if not decode else input.decode(ENCODING)
 
 class Git(object):
@@ -155,12 +157,9 @@ class Git(object):
                 if parent == startCommit:
                     commits.append(parent)
                     return None
-                else:
-                    if git.getMergeBase(startCommit,parent).strip() != startCommit:
-                        return None
-                    else:
-                        commits.append(parent)
-                        walkHistory(parent)
+                elif git.getMergeBase(startCommit,parent).strip() == startCommit:
+                    commits.append(parent)
+                    walkHistory(parent)
         commits.append(endCommit)  
         walkHistory(endCommit)
         return commits

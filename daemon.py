@@ -176,18 +176,21 @@ def buildSyncBranch(commits,last_commit):
         print("Cherry picking",commit)
         parents = git.getParentCommits(commit)
         out = ""
-        if len(parents) > 1 and i > 0:
-            if parents[0] == commits[i-1]:
-                parent_number = 1
+        if len(parents) > 1:
+            parent_number = None
+            if i > 0:
+                if parents[0] == commits[i-1]:
+                    parent_number = 1
+                elif parents[1] == commits[i-1]:
+                    parent_number = 2
             else:
-                parent_number = 2
+                if parents[0] == last_commit:
+                    parent_number = 1
+                elif parents[1] == last_commit:
+                    parent_number = 2
             out = git._exec(['cherry-pick','-m',str(parent_number),commit])
         else:
             out = git._exec(['cherry-pick', commit])
-        # TODO: Fix this, it doesn't really work because we don't read in stderror
-        if out.upper().find('FATAL') >= 0:
-            sendEmail(ADMIN_EMAIL,"Error during cherry-pick operation",out)
-            exit()
         i += 1    
 
 def setLastSyncCommit(commit_id):           
