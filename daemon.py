@@ -66,7 +66,7 @@ def loop(no_checkin):
 
             # commit all commits on sync-branch
             for commit in sync_commits:
-                statuses = checkin.getStatuses(commit.id)
+                statuses = checkin.getStatuses(commit.id, getLastSyncCommit())
                 checkin.checkout(statuses, commit.comment)
                 sendSummaryMessage(commit.email, commit.id, getLastSyncCommit())
                 setLastSyncCommit(commit.id)

@@ -11,7 +11,7 @@ from os.path import isdir
 IGNORE_CONFLICTS=False
 SEND_MAIL=False
 SINGLE_COMMIT=None
-USE_PARENT=None
+COMMIT_PARENT=None
 ARGS = {
     'force': 'ignore conflicts and check-in anyway',
     'sendmail':'send mail to commiter after the checkin is complete',
@@ -19,12 +19,12 @@ ARGS = {
     'parent' : 'the commit id of the parent to use as the parent commit (use in combination with commit)'
 }
 
-def main(force=False,sendmail=False,commit=None, parent=None):
+def main(force=False,sendmail=False,commit=None, parent=None, daemon=False):
     global IGNORE_CONFLICTS, SEND_MAIL, SINGLE_COMMIT,USE_PARENT
     if parent != None and commit == None:
         fail("parent option cannot be used without commit option")
     SINGLE_COMMIT = commit
-    USE_PARENT=parent
+    COMMIT_PARENT=parent
     if force:
         IGNORE_CONFLICTS=True
     if sendmail:
@@ -40,7 +40,13 @@ def main(force=False,sendmail=False,commit=None, parent=None):
     def _commit():
         if not id:
             return
-        statuses = getStatuses(id)
+        parent_id = None
+        if SINGLE_COMMIT != None:
+            if COMMIT_PARENT != None:
+                parent_id = USE_PARENT
+            else:
+                parent_id = SINGLE_COMMIT + '^'
+        statuses = getStatuses(id,parent_id)
         checkout(statuses, '\n'.join(comment))
         if SEND_MAIL:
             sendSummaryMessage(email,id)
@@ -60,16 +66,10 @@ def main(force=False,sendmail=False,commit=None, parent=None):
             comment.append(line)
     _commit()
 
-def getStatuses(id):
-    if SINGLE_COMMIT != None:
-        if USE_PARENT != None:
-            parent_id = USE_PARENT
-        else:
-            parent_id = SINGLE_COMMIT + '^'
-        status = git_exec(['diff','--name-status', '-M', '-z', '%s..%s' % (parent_id, SINGLE_COMMIT)])
-    else:
-        status = git_exec(['diff','--name-status', '-M', '-z', '%s..%s' % (cfg.get('last_commit_id',CI_TAG), id)])
-
+def getStatuses(id, parent_id=None):
+    if parent_id == None:
+        parent_id == id + '^'
+    status = git_exec(['diff','--name-status', '-M', '-z', '%s..%s' % (parent_id, id)])
     types = {'M':Modify, 'R':Rename, 'D':Delete, 'A':Add, 'C':Add}
     list = []
     split = status.split('\x00')
