@@ -54,7 +54,7 @@ def loop(no_checkin):
             # check that the sync branch is accurate
             diff = checkDiff(SYNC_BRANCH,CHECKIN_BRANCH)
             if diff != None:
-                sendAdminEmail("Sync branch does not match " + CHECK_BRANCH + "! Aborting...",diff)
+                sendAdminEmail("Sync branch does not match " + CHECKIN_BRANCH + "! Aborting...",diff)
                 return false
 
             # update clearcase view
@@ -102,7 +102,7 @@ def loop(no_checkin):
 
         # cherry-pick commit from the 'clearcase' branch
         for commit in commits:
-            git._exec(['cherry-pick', '-x', commit.id])
+            git._exec(['cherry-pick', commit.id])
 
         # check that the clearcase branch matches the CHECKIN_BRANCH, at this point, they
         # should be the same.
