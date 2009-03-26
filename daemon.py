@@ -127,7 +127,7 @@ def loop(no_checkin):
             return False
 
     except Exception as e:
-        sendAdminemail("Error during clearcase history acquisition!",str(e))
+        sendAdminEmail("Error during clearcase history acquisition!",str(e))
         return False
 
     try: 
