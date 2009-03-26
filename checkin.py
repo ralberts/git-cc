@@ -24,7 +24,8 @@ def main(force=False,sendmail=False,commit=None, parent=None, daemon=False):
     if parent != None and commit == None:
         fail("parent option cannot be used without commit option")
     SINGLE_COMMIT = commit
-    COMMIT_PARENT=parent
+    COMMIT_PARENT = parent
+    clearHashCache()
     if force:
         IGNORE_CONFLICTS=True
     if sendmail:
@@ -148,14 +149,10 @@ def storeGitHash(file,hash):
     HASH_CACHE[file] = hash
 
 def getGitHash(file):
-    if file in HASH_CACHE:
-        return HASH_CACHE[file]
-    else:
-#        cmd = ['merge-base']
-#        cmd.extend([CC_TAG,'HEAD'])
-        #HASH_CACHE[file] = getBlob(git._exec(cmd).strip(), file)
-        HASH_CACHE[file] = getBlob(cfg.get('last_commit_id'), file)
+    if file not in HASH_CACHE:
+        HASH_CACHE[file] = getBlob(cfg.get('last_sync_commit_id'), file)
     print("returning hash",HASH_CACHE[file],"for file",file)
     return HASH_CACHE[file]
         
-    
+def clearHashCache():
+    HASH_CACHE.clear();
