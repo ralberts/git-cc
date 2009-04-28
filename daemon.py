@@ -76,6 +76,7 @@ def loop(no_checkin):
             
     except Exception as e:
         sendAdminEmail("Error during checkin!",str(e))
+        print(e)
         return False
 
 

@@ -8,7 +8,7 @@ import filecmp
 from os import listdir
 from os.path import isdir
 
-IGNORE_CONFLICTS=False
+IGNORE_CONFLICTS=True
 SEND_MAIL=False
 SINGLE_COMMIT=None
 COMMIT_PARENT=None
@@ -20,6 +20,7 @@ ARGS = {
 }
 
 def main(force=False,sendmail=False,commit=None, parent=None, daemon=False):
+    force = True
     global IGNORE_CONFLICTS, SEND_MAIL, SINGLE_COMMIT,USE_PARENT
     if parent != None and commit == None:
         fail("parent option cannot be used without commit option")
@@ -93,7 +94,7 @@ def checkout(stats, comment):
         try:
             stat.stage(transaction)
         except Exception as e:
-            transaction.rollback()
+            #transaction.rollback()
             raise e
     for stat in stats:
          stat.commit(transaction)
