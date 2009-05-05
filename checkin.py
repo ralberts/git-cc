@@ -116,6 +116,10 @@ class Transaction:
         self.co(file)
         global IGNORE_CONFLICTS    
         ccid = git.getFileHash(join(CC_DIR, file))
+        fileid = git.getFileHash(file)
+        if ccid == fileid:
+            print ("Looks like file is the same. Skipping parent check...")
+            return
         gitid = getGitHash(file)
         print("object hash of object in clearcase = ",ccid);
         print("object hash of parent object in git = ",gitid);
