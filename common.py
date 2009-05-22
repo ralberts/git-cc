@@ -1,10 +1,9 @@
-import smtplib
+import os, sys, smtplib
 from datetime import datetime, timedelta
 from distutils import __version__
 v30 = __version__.find("3.") == 0
 
 from subprocess import Popen, PIPE
-import os, sys
 from os.path import join, exists, abspath, dirname
 if v30:
     from configparser import SafeConfigParser
@@ -25,6 +24,21 @@ def debug(string):
     if DEBUG:
         print(string)
 
+def ask(question,options=["Yes","No"]):
+    answer = ""
+    if len(options) < 3:
+        question += ' ('
+        for option in options:
+            question += option[:1] + ' ' + option + ', '
+        else:
+            question = question[:-2] + ')'
+        return input(question).lower()[:1]
+    else:
+        print(question)
+        for option in options:
+            print ('\t',option[:1],':',option)
+        return input('Please select an option:').lower()[:1]
+    
 def git_exec(cmd, **args):
     return popen('git', cmd, GIT_DIR, **args)
 
@@ -74,14 +88,21 @@ class GitConfigParser():
         return self.parser.get(self.section, name)
     def getList(self, name, default=None):
         return self.get(name, default).split('|')
+    def setLastCherryPick(self,value):
+        self.set('last_cherry_pick_commit',value);
+    def getLastCherryPick(self,default=""):
+        return self.get('last_cherry_pick_commit',default)
+    def getLastSyncCommit(self,default=""):
+        return self.get('last_sync_commit_id',default)
+    def setLastSyncCommit(self,value):
+        self.set('last_sync_commit_id', value)
 
 
+def write(file, blob, mode='wb'):
+    _write(file, blob, mode)
 
-def write(file, blob):
-    _write(file, blob)
-
-def _write(file, blob):
-    f = open(file, 'wb')
+def _write(file, blob, mode):
+    f = open(file, mode)
     f.write(blob)
     f.close()
 
@@ -102,14 +123,13 @@ def buildPath(seq):
         return '\\'.join(seq).replace("/","\\")
 
 def getClearcaseDatetime(timestamp):
-    # Strip off UTC, as this is not handled well by pythong.
+    # Strip off UTC, as this is not handled well by python.
     if len(timestamp) > 22: # UTC offset is -HH:MM (happens on windows 2003 server) 
         time = timestamp[:-6]
     else: # UTC offset is -HH
         time = timestamp[:-3]
     return datetime.strptime(time, '%Y-%m-%dT%H:%M:%S')        
-
-
+    
     
 GIT_DIR = gitDir()
 cfg = GitConfigParser()

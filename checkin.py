@@ -1,12 +1,13 @@
 """Checkin new git changesets to Clearcase"""
 
+import filecmp, shutil
 from common import *
 from daemon import *
 from clearcase import cc
 from status import Modify, Add, Delete, Rename
-import filecmp
 from os import listdir
 from os.path import isdir
+from exceptions import MergeException
 
 IGNORE_CONFLICTS=False
 SEND_MAIL=False
@@ -118,16 +119,27 @@ class Transaction:
         ccid = git.getFileHash(join(CC_DIR, file))
         fileid = git.getFileHash(file)
         if ccid == fileid:
-            print ("Looks like file is the same. Skipping parent check...")
+            debug ("Looks like file is the same. Skipping parent check...")
             return
         gitid = getGitHash(file)
-        print("object hash of object in clearcase = ",ccid);
-        print("object hash of parent object in git = ",gitid);
+        debug("object hash of object in clearcase = " + ccid);
+        debug("object hash of parent object in git = " + gitid);
         if ccid != gitid:
-            if not IGNORE_CONFLICTS:
-                raise Exception('File has been modified: %s. Try rebasing.' % file)
-            else:
-                print ('WARNING: Detected possible confilct with',file,'...ignoring...')
+            # File needs to be merged
+            debug("Merge needed for " + file)
+            mergeOp = Merge(file, gitid);
+            def whatToDo():
+                input = ask("File " + file + " has changed in clearcase.  What would you like to do?", ["Overwrite with version in Git","Keep clearcase version", "Merge [this may open up the merge manager if the automatic merge fails]"])
+                if input == 'o':
+                    mergeOp.keepLocal()
+                elif input == 'k':
+                    mergeOp.keepRemote()
+                elif input == 'm':
+                    mergeOp.merge()
+                else:
+                    print("Invalid option")
+                    whatToDo()
+            whatToDo()
     def rollback(self):
         for file in self.checkedout:
             cc_exec(['unco', '-rm', file])
@@ -138,6 +150,54 @@ class Transaction:
             cc_exec(['ci', '-identical', '-c', comment, file])
             
         cc.commit()
+
+class Merge:
+    def __init__(self,file,baseSHA):
+        self.mergelock = buildPath([GIT_DIR, '.git', 'gitcc_merge'])
+        self.baseFile = buildPath([GIT_DIR, file + '.BASE'])
+        self.remoteFile = buildPath([CC_DIR, file + '.REMOTE'])
+        self.localFile = buildPath([GIT_DIR, file])
+        self.originalFile = buildPath([CC_DIR, file])
+        self.baseSHA = baseSHA
+    
+    def stage(self):
+        self.writeMergeLock()
+        # Create BASE File
+        fileContents = git.show(self.baseSHA)
+        write(self.baseFile, fileContents,'w')
+
+        # Create LOCAL File
+        shutil.copyfile(self.originalFile, self.remoteFile)
+        #os.remove(self.originalFile)
+        
+    def merge(self):
+        try:
+            self.stage()
+            git.mergeFiles(self.localFile, self.baseFile, self.remoteFile, self.originalFile)
+        except Exception as e:
+            print("Merge unsuccessful. Restoring original...")
+            shutil.copyfile(self.remoteFile, self.originalFile)
+            raise MergeException(self.originalFile, str(e))
+        else:
+            self.mergeCleanup()
+    
+    def keepLocal(self):
+        shutil.copy(self.localFile, self.originalFile)
+        
+    def keepRemote(self):
+        print("Keeping remote version")
+        # What to do in this case?  nothing??
+        
+    def mergeCleanup(self):
+        os.remove(self.baseFile)
+        os.remove(self.remoteFile)
+        self.removeMergeLock()
+        
+    def writeMergeLock(self):
+        write(self.mergelock,self.baseFile,'w')
+    
+    def removeMergeLock(self):
+        os.remove(self.mergelock)
 
 # Retrieves the has of a file currently in clearcase
 # We cache here for two reason, the first is speed, 

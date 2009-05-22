@@ -1,5 +1,7 @@
+from proc import Process
+from exceptions import MergeException
 from common import *
-from datetime import *
+
 
 def popen(exe, cmd, cwd, env=None, decode=True):
     cmd.insert(0, exe)
@@ -9,7 +11,6 @@ def popen(exe, cmd, cwd, env=None, decode=True):
     input = process.stdout.read()
     
     return input if not decode else input.decode(ENCODING)
-
 class Git(object):
     def getCurrentBranch(self):
         for branch in git_exec(['branch']).split('\n'):
@@ -28,6 +29,11 @@ class Git(object):
                 raise Exception(output)
             
         return output
+        
+    def _exec2(self, args, check=False, env=None, returnCode=None):
+        proc = Process('git', args, GIT_DIR, env, outcome=returnCode)
+        proc.call()
+        return proc        
 
     def getBranchList(self):
         def trm(branch):
@@ -66,14 +72,16 @@ class Git(object):
         self._exec(['add',path],check)
 
     def rebase(self,branch):
-        out = git._exec(['rebase',branch])
-        return out
+        proc = git._exec2(['rebase', branch], returnCode=0)
+        if proc.returncode != 0:
+            raise Exception('Error during rebase. ' + proc.stdout + proc.stderr)
+        return proc.stdout
       
     def merge(self,branch,message='cc->git auto merge'):
         return self._exec(['merge','-m',message,branch])
 
     def pull(self,):
-        return self._exec(['pull'])
+        return self._exec2(['pull']).stdout
         
     def checkout(self,branchname,force=False):
         if force:
@@ -126,6 +134,10 @@ class Git(object):
     def tag(self, tag, id="HEAD"):
         git_exec(['tag', '-f', tag, id])  
     
+    def show(self, sha1):
+        proc = self._exec2(['show',sha1])
+        return proc.stdout
+        
     def getParentCommits(self, commit):
         output = self._exec(['log','--pretty=format:%P', '-n', '1' ,commit])
         parents = output.split(' ')
@@ -163,21 +175,29 @@ class Git(object):
         commits.append(endCommit)  
         walkHistory(endCommit)
         return commits
-#        commits = []
-#        def walkHistory(commit):
-#            commits.append(commit)
-#            if commit == startCommit:
-#                return None
-#            parents = git.getParentCommits(commit)
-#            for parent in parents:
-#                if commits[-1] == startCommit:
-#                    return None
-#                elif git.getMergeBase(startCommit,parent).strip() != startCommit:
-#                    return None
-#                else:
-#                    walkHistory(parent)  
-#        walkHistory(endCommit)
-#        return commits        
+
+    def mergeFiles(self, file1, base, file2, outputfile):
+        merge_proc = self._exec2(['merge-file', '-p', file1, base, file2])
+        conflicts = merge_proc.returncode
+        if conflicts > 0:
+            debug("Automatic Merge failed.  " + str(merge_proc.returncode) + ' conflicts need to be resolved manually')
+            if not self.openMergeTool(file1, base, file2, outputfile):
+                raise MergeException(outputfile, "Manual merge failed.")
+        elif conflicts < 0:
+            raise MergeException(outputfile, "Error during automatic merge: " + merge_proc.stderr)
+        else:
+            write(outputfile, merge_proc.stdout)
+        
+    def openMergeTool(self, local, base, remote, output):
+        proc = Process("c:\\Program Files\\Perforce\\p4merge.exe", [base, remote, local, output], GIT_DIR)
+        proc.call()
+        debug("Merge program exited with " + str(proc.returncode))
+        if proc.returncode == 0:
+            return True
+        return False
+        
+
+
 
 git = Git()        
         
