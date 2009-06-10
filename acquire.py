@@ -60,7 +60,7 @@ def checkRepo():
     if not git.branchExists(CC_TAG):
         answer = input(CC_TAG + " does not exist.  Do you want me to create it? (Y or N)")
         if answer.upper().find('Y') == 0:
-            git.checkout("master")
+            git.checkout(cfg.get('checkin_branch','master'))
             git.createBranch(CC_TAG)
             if not git.branchExists(CC_TAG):
                 raise Exception("Unable to create branch " + CC_TAG)
