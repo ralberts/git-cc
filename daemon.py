@@ -51,65 +51,65 @@ def loop(no_checkin):
         else:
             print('Invalid option ' + answer)
             return False
-    try:
-        if not RECOVERY_MODE:
-            # Pull most recent changes
-            git.checkout(CHECKIN_BRANCH);
-            pull = git._exec(["pull"])
-    
-            # Get list of commits
-            commits = git.getCommitList(last_commit, git.getLastCommit(CHECKIN_BRANCH).id)
-            if len(commits) > 1 and not no_checkin:
-                
-                # build temporary sync branch
-                commits.pop() # pop off the first commit (we don't need it, and it could be a merge commit, which causes problems!)
-                commits.reverse()
-                buildSyncBranch(commits, last_commit)
-                
-                # check that the sync branch is accurate
-                diff = checkDiff(SYNC_BRANCH,CHECKIN_BRANCH)
-                if diff != None:
-                    sendAdminEmail("Sync branch does not match " + CHECKIN_BRANCH + "! Aborting...",diff)
-                    return False
-    
-                # update clearcase view
-                cc_exec(['update', '.'])
-    
-        # if SYNC_BRANCH already existed, then we need to start 
-        # from the last_sync_commit_id when committing new changes
-        # Therefore, we must remove already synced commits from
-        # the list.
-        if RECOVERY_MODE: 
-            if not git.branchExists(SYNC_BRANCH):
-                git.createBranch(SYNC_BRANCH, CHECKIN_BRANCH)
-            git.checkout(SYNC_BRANCH)
-            
+    if not no_checkin:
+        try:
+            if not RECOVERY_MODE:
+                # Pull most recent changes
+                git.checkout(CHECKIN_BRANCH);
+                pull = git._exec(["pull"])
         
-        if getLastSyncCommit() and RECOVERY_MODE:
-            sync_commits = git.getCommitHistory(getLastSyncCommit(),'HEAD')
-        else:
-            # set initial last_sync_commit_id == last_commit
-            setLastSyncCommit(last_commit)
-            sync_commits = git.getCommitHistory(last_commit,'HEAD')
-
-
-        # commit all commits on sync-branch
-        for commit in sync_commits:
-            statuses = checkin.getStatuses(commit.id, getLastSyncCommit())
-            checkin.checkout(statuses, commit.comment)
-            sendSummaryMessage(commit.email, commit.id, getLastSyncCommit())
-            setLastSyncCommit(commit.id)
+                # Get list of commits
+                commits = git.getCommitList(last_commit, git.getLastCommit(CHECKIN_BRANCH).id)
+                if len(commits) > 1 and not no_checkin:
+                    
+                    # build temporary sync branch
+                    commits.pop() # pop off the first commit (we don't need it, and it could be a merge commit, which causes problems!)
+                    commits.reverse()
+                    buildSyncBranch(commits, last_commit)
+                    
+                    # check that the sync branch is accurate
+                    diff = checkDiff(SYNC_BRANCH,CHECKIN_BRANCH)
+                    if diff != None:
+                        sendAdminEmail("Sync branch does not match " + CHECKIN_BRANCH + "! Aborting...",diff)
+                        return False
+        
+                    # update clearcase view
+                    cc_exec(['update', '.'])
+        
+            # if SYNC_BRANCH already existed, then we need to start 
+            # from the last_sync_commit_id when committing new changes
+            # Therefore, we must remove already synced commits from
+            # the list.
+            if RECOVERY_MODE: 
+                if not git.branchExists(SYNC_BRANCH):
+                    git.createBranch(SYNC_BRANCH, CHECKIN_BRANCH)
+                git.checkout(SYNC_BRANCH)
+                
             
-        # All commits happened succesfully
-        setLastSyncCommit("")
-
-            
-    except Exception as e:
-        print('Error',e)
-        traceback.print_exc(file=sys.stdout)
-        sendAdminEmail("Error during checkin!",str(e))
-        return False
-
+            if getLastSyncCommit() and RECOVERY_MODE:
+                sync_commits = git.getCommitHistory(getLastSyncCommit(),'HEAD')
+            else:
+                # set initial last_sync_commit_id == last_commit
+                setLastSyncCommit(last_commit)
+                sync_commits = git.getCommitHistory(last_commit,'HEAD')
+    
+    
+            # commit all commits on sync-branch
+            for commit in sync_commits:
+                statuses = checkin.getStatuses(commit.id, getLastSyncCommit())
+                checkin.checkout(statuses, commit.comment)
+                sendSummaryMessage(commit.email, commit.id, getLastSyncCommit())
+                setLastSyncCommit(commit.id)
+                
+            # All commits happened succesfully
+            setLastSyncCommit("")
+    
+                
+        except Exception as e:
+            print('Error',e)
+            traceback.print_exc(file=sys.stdout)
+            sendAdminEmail("Error during checkin!",str(e))
+            return False
     try:
 
         # Check to see if we are recovering from a previous sync
