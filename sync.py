@@ -30,6 +30,8 @@ def main(glob,ignore_whitespace=False):
                             os.chmod(newFile, stat.S_IWRITE)
 
 def doDiff(file1,file2):
+    if not os.path.exists(file1):
+        return True
     cmd = ['--ignore-all-space', file1, file2]
     output = popen('diff', cmd, cwd=os.getcwd())
     debug("Output from diff is: " + output)
